@@ -25,13 +25,16 @@ class UserManager(BaseUserManager):
 
 
 class User(AbstractBaseUser, PermissionsMixin):
+    """
+    User custom model that uses email as the unique identifier instead of username.
+    """
     email = models.EmailField(max_length=255, unique=True)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     created_date = models.DateTimeField(auto_now_add=True)
 
     objects = UserManager()
-
+    # The field used for authentication.
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []
 
