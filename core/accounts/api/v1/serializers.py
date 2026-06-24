@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from accounts.models import User
+from accounts.models import User, Profile
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -23,3 +23,10 @@ class UserSerializer(serializers.ModelSerializer):
             user.set_password(validated_data['password'])
             user.save()
             return user
+
+
+class ProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Profile
+        fields = ['user', 'first_name', 'last_name', 'image', 'bio']
+        extra_kwargs = {'user': {'read_only': True}}
