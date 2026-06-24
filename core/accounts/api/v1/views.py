@@ -1,9 +1,10 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import ProfileSerializer, UserSerializer
-from accounts.permissions import AllowAny
 from rest_framework.permissions import IsAuthenticated
+from rest_framework_simplejwt.tokens import RefreshToken
+from accounts.permissions import AllowAny
+from .serializers import ProfileSerializer, UserSerializer
 
 
 class UserRegisterView(APIView):
@@ -21,6 +22,9 @@ class UserRegisterView(APIView):
 
 
 class UserProfileView(APIView):
+    """
+    View to retrieve and update the profile of the authenticated user.
+    """
     serializer_class = ProfileSerializer
     permission_classes = [IsAuthenticated]
     def get(self, request):
@@ -33,3 +37,15 @@ class UserProfileView(APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class UserlogoutView(APIView):
+    """
+    View to log out a user.
+    """
+    permission_classes = [IsAuthenticated]
+    def post(self, request):
+        refresh_token = request.data.get('refresh_token')
+        token = RefreshToken(refresh_token)
+        token.blacklist()
+        return Response(status=205)
