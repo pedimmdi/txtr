@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from accounts.models import User, Profile
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -28,5 +29,28 @@ class UserSerializer(serializers.ModelSerializer):
 class ProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = Profile
-        fields = ['user', 'first_name', 'last_name', 'image', 'bio']
+        fields = ['user', 'username', 'birth_date', 'image', 'bio']
         extra_kwargs = {'user': {'read_only': True}}
+
+
+class PublicProfileSerializer(serializers.ModelSerializer):
+    """A serializer for displaying users' public profiles."""
+    class Meta:
+        model = Profile
+        fields = ['username', 'image', 'bio', 'birth_date']
+
+
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    def validate(self, attrs):
+        # login and getting tokens
+        data = super().validate(attrs)
+        user = self.user
+        profile = getattr(user, 'profile', None)
+        data['user'] = {
+            'id': user.id,
+            'email': user.email,
+            'username': profile.username if profile else None,
+            'image': profile.image.url if profile and profile.image else None,
+            'bio': profile.bio if profile else "",
+        }
+        return data

@@ -27,6 +27,6 @@ admin.site.register(User, CustomUserAdmin)
 
 
 class ProfileUserAdmin(admin.ModelAdmin):
-    list_display = ['user', 'first_name', 'last_name']
+    list_display = ['user', 'username', 'birth_date']
     
 admin.site.register(Profile, ProfileUserAdmin)

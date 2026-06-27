@@ -1,10 +1,12 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
-from accounts.permissions import AllowAny
-from .serializers import ProfileSerializer, UserSerializer
+from django.shortcuts import get_object_or_404
+from rest_framework_simplejwt.views import TokenObtainPairView
+from .serializers import ProfileSerializer, UserSerializer, PublicProfileSerializer, CustomTokenObtainPairSerializer
+from accounts.models import Profile
 
 
 class UserRegisterView(APIView):
@@ -39,6 +41,24 @@ class UserProfileView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+class PublicProfileView(APIView):
+    """
+    View for viewing other users' profiles by username
+    """
+    permission_classes = [AllowAny]
+    def get(self, request, username):
+        profile = get_object_or_404(Profile, username=username)
+        serializer = PublicProfileSerializer(profile)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class CustomUserLoginView(TokenObtainPairView):
+    """
+    Custom login view that returns user information along with tokens
+    """
+    serializer_class = CustomTokenObtainPairSerializer
+
+
 class UserlogoutView(APIView):
     """
     View to log out a user.
@@ -49,3 +69,4 @@ class UserlogoutView(APIView):
         token = RefreshToken(refresh_token)
         token.blacklist()
         return Response(status=205)
+

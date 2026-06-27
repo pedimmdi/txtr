@@ -49,10 +49,10 @@ class Profile(models.Model):
     Profile model that extends the User model with additional information.
     """
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    first_name = models.CharField(max_length=255, blank=True)
-    last_name = models.CharField(max_length=255, blank=True)
+    username = models.CharField(unique=True, max_length=255, blank=True)
     image = models.ImageField(upload_to='profile/', blank=True, null=True)
     bio = models.TextField(blank=True)
+    birth_date = models.DateField(blank=True, null=True)
 
     def __str__(self):
         return self.user.email
@@ -61,4 +61,18 @@ class Profile(models.Model):
 @receiver(post_save, sender=User)
 def create_profile(sender, instance, created, **kwargs):
     if created:
-        Profile.objects.create(user=instance)
+        if hasattr(instance, 'username') and instance.username:
+            suggested_username = instance.username
+        else:
+            suggested_username = instance.email.split('@')[0]
+
+        base_username = suggested_username
+        counter = 1
+        while Profile.objects.filter(username=suggested_username).exists():
+            suggested_username = f"{base_username}{counter}"
+            counter += 1
+
+        Profile.objects.create(
+            user=instance,
+            username=suggested_username
+        )
