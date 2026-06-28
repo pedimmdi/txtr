@@ -9,7 +9,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from accounts.models import Profile, Follow
 from accounts.permissions import OnlyAnonymousUsers
 from .serializers import (
-    ProfileSerializer, UserSerializer,
+    ProfileSerializer, UserSerializer, UserUpdateSerializer,
     PublicProfileSerializer, CustomTokenObtainPairSerializer
 )
 
@@ -46,6 +46,22 @@ class UserProfileView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+class UserUpdateView(APIView):
+    """
+    View to update the authenticated user's email and/or password
+    (separate from Profile, since email/password live on the User model).
+    """
+    serializer_class = UserUpdateSerializer
+    permission_classes = [IsAuthenticated]
+
+    def put(self, request):
+        user = request.user
+        serializer = self.serializer_class(user, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
 class PublicProfileView(APIView):
     """
     View for viewing other users' profiles by username
@@ -64,7 +80,7 @@ class CustomUserLoginView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
 
 
-class UserlogoutView(APIView):
+class UserLogoutView(APIView):
     """
     View to log out a user.
     """
