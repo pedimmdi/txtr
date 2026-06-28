@@ -1,12 +1,17 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.shortcuts import get_object_or_404
 from rest_framework_simplejwt.views import TokenObtainPairView
-from .serializers import ProfileSerializer, UserSerializer, PublicProfileSerializer, CustomTokenObtainPairSerializer
-from accounts.models import Profile
+from accounts.models import Profile, Follow
+from accounts.permissions import OnlyAnonymousUsers
+from .serializers import (
+    ProfileSerializer, UserSerializer,
+    PublicProfileSerializer, CustomTokenObtainPairSerializer
+)
 
 
 class UserRegisterView(APIView):
@@ -15,7 +20,7 @@ class UserRegisterView(APIView):
     """
     serializer_class = UserSerializer
     # Only guest users can register. Logged-in users are blocked to prevent duplicate accounts.
-    permission_classes = [AllowAny]
+    permission_classes = [OnlyAnonymousUsers]
     def post(self, request):
         serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -48,7 +53,7 @@ class PublicProfileView(APIView):
     permission_classes = [AllowAny]
     def get(self, request, username):
         profile = get_object_or_404(Profile, username=username)
-        serializer = PublicProfileSerializer(profile)
+        serializer = PublicProfileSerializer(profile, context={'request': request})
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -70,3 +75,62 @@ class UserlogoutView(APIView):
         token.blacklist()
         return Response(status=205)
 
+
+class FollowToggleView(APIView):
+    """
+    Follow or unfollow a user by username. Same request toggles the state.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, username):
+        profile = get_object_or_404(Profile, username=username)
+        target_user = profile.user
+
+        if target_user == request.user:
+            return Response(
+                {"detail": "You cannot follow yourself."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        follow, created = Follow.objects.get_or_create(
+            follower=request.user,
+            following=target_user
+        )
+
+        if not created:
+            follow.delete()
+            return Response({"is_following": False}, status=status.HTTP_200_OK)
+
+        return Response({"is_following": True}, status=status.HTTP_201_CREATED)
+
+
+class FollowersListView(generics.ListAPIView):
+    """
+    List of users who follow the given username.
+    """
+    serializer_class = PublicProfileSerializer
+    permission_classes = [AllowAny]
+
+    def get_queryset(self):
+        profile = get_object_or_404(Profile, username=self.kwargs['username'])
+        follower_ids = profile.user.followers.values_list('follower_id', flat=True)
+        return Profile.objects.filter(user_id__in=follower_ids)
+
+    def get_serializer_context(self):
+        return {'request': self.request}
+
+
+class FollowingListView(generics.ListAPIView):
+    """
+    List of users that the given username follows.
+    """
+    serializer_class = PublicProfileSerializer
+    permission_classes = [AllowAny]
+
+    def get_queryset(self):
+        profile = get_object_or_404(Profile, username=self.kwargs['username'])
+        following_ids = profile.user.following.values_list('following_id', flat=True)
+        return Profile.objects.filter(user_id__in=following_ids)
+
+    def get_serializer_context(self):
+        return {'request': self.request}

@@ -76,3 +76,26 @@ def create_profile(sender, instance, created, **kwargs):
             user=instance,
             username=suggested_username
         )
+
+
+class Follow(models.Model):
+    """
+    Represents a follow relationship between two users.
+    """
+    follower = models.ForeignKey(
+        User,
+        related_name='following',
+        on_delete=models.CASCADE
+    )
+    following = models.ForeignKey(
+        User,
+        related_name='followers',
+        on_delete=models.CASCADE
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('follower', 'following')
+
+    def __str__(self):
+        return f"{self.follower} follows {self.following}"

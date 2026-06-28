@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from accounts.models import User, Profile
+from accounts.models import User, Profile, Follow
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 
@@ -35,9 +35,26 @@ class ProfileSerializer(serializers.ModelSerializer):
 
 class PublicProfileSerializer(serializers.ModelSerializer):
     """A serializer for displaying users' public profiles."""
+    is_following = serializers.SerializerMethodField()
+    followers_count = serializers.SerializerMethodField()
+    following_count = serializers.SerializerMethodField()
+
     class Meta:
         model = Profile
-        fields = ['username', 'image', 'bio', 'birth_date']
+        fields = ['username', 'image', 'bio', 'birth_date',
+                  'is_following', 'followers_count', 'following_count']
+
+    def get_is_following(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return False
+        return Follow.objects.filter(follower=request.user, following=obj.user).exists()
+
+    def get_followers_count(self, obj):
+        return obj.user.followers.count()
+
+    def get_following_count(self, obj):
+        return obj.user.following.count()
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):

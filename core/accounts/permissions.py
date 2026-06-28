@@ -1,7 +1,7 @@
 from rest_framework.permissions import BasePermission
 
 
-class AllowAny(BasePermission):
+class OnlyAnonymousUsers(BasePermission):
     """
     Allows access only to anonymous (unauthenticated) users.
     """
