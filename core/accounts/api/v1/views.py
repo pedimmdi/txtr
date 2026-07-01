@@ -8,6 +8,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework_simplejwt.views import TokenObtainPairView
 from accounts.models import Profile, Follow
 from accounts.permissions import OnlyAnonymousUsers
+from rest_framework.pagination import PageNumberPagination
 from .serializers import (
     ProfileSerializer, UserSerializer, UserUpdateSerializer,
     PublicProfileSerializer, CustomTokenObtainPairSerializer
@@ -120,13 +121,20 @@ class FollowToggleView(APIView):
         return Response({"is_following": True}, status=status.HTTP_201_CREATED)
 
 
+class StandardResultsSetPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = 'page_size'
+    max_page_size = 1000
+
+
 class FollowersListView(generics.ListAPIView):
     """
     List of users who follow the given username.
     """
     serializer_class = PublicProfileSerializer
     permission_classes = [AllowAny]
-
+    pagination_class = StandardResultsSetPagination
+    
     def get_queryset(self):
         profile = get_object_or_404(Profile, username=self.kwargs['username'])
         follower_ids = profile.user.followers.values_list('follower_id', flat=True)
@@ -142,7 +150,8 @@ class FollowingListView(generics.ListAPIView):
     """
     serializer_class = PublicProfileSerializer
     permission_classes = [AllowAny]
-
+    pagination_class = StandardResultsSetPagination
+    
     def get_queryset(self):
         profile = get_object_or_404(Profile, username=self.kwargs['username'])
         following_ids = profile.user.following.values_list('following_id', flat=True)

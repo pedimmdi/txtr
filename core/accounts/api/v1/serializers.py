@@ -5,6 +5,7 @@ from accounts.models import User, Profile, Follow
 
 
 class UserSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, validators=[validate_password])
     class Meta:
         model = User
         fields = ['email', 'password']
