@@ -10,6 +10,11 @@ class Post(models.Model):
         related_name='posts'
     )
     content = models.CharField(max_length=1000)
+    hashtags = models.ManyToManyField(
+        'hashtags.Hashtag',
+        blank=True,
+        related_name='posts'
+    )
     created_date = models.DateTimeField(auto_now_add=True)
     updated_date = models.DateTimeField(auto_now=True)
     

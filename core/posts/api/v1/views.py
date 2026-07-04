@@ -11,6 +11,7 @@ from accounts.models import Profile, Follow
 from posts.models import Post, Like
 from posts.permissions import IsAuthorOrReadOnly
 from .serializers import PostSerializer
+from core.throttles import PostCreateRateThrottle, LikeRateThrottle
 
 
 class StandardResultsSetPagination(PageNumberPagination):
@@ -24,7 +25,11 @@ def get_annotated_posts(user):
     Returns a Post queryset annotated with likes_count and is_liked.
     Solves the N+1 query problem.
     """
-    qs = Post.objects.select_related('author', 'author__profile').annotate(
+    qs = Post.objects.select_related(
+        'author', 'author__profile'
+    ).prefetch_related(
+        'hashtags'
+    ).annotate(
         likes_count=Count('likes')
     )
     if user and user.is_authenticated:
@@ -43,6 +48,15 @@ class PostListCreateView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         return get_annotated_posts(self.request.user)
+
+    def get_throttles(self):
+        """
+        GET requests use default global throttle.
+        POST requests use stricter PostCreateRateThrottle.
+        """
+        if self.request.method == 'POST':
+            return [PostCreateRateThrottle()]
+        return super().get_throttles()
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
@@ -90,6 +104,7 @@ class FeedView(generics.ListAPIView):
 class LikeToggleView(APIView):
     """POST to like, POST again to unlike"""
     permission_classes = [IsAuthenticated]
+    throttle_classes = [LikeRateThrottle]
 
     def post(self, request, pk):
         post = get_object_or_404(Post, pk=pk)

@@ -51,6 +51,8 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt.token_blacklist',
     'accounts',
     'posts',
+    'comments',
+    'hashtags',
 ]
 
 # Substituting a custom User model
@@ -69,6 +71,21 @@ REST_FRAMEWORK = {
         'rest_framework.filters.SearchFilter',
         'rest_framework.filters.OrderingFilter',
     ],
+    # throttles settings
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '100/hour',
+        'user': '1000/hour',
+        # Second layer - dedicated
+        'auth': '5/min',
+        'post_create': '20/hour',
+        'likes': '60/min',
+        'follows': '30/min',
+        'comment_create': '30/hour',
+    }
 }
 
 

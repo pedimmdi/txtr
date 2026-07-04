@@ -1,26 +1,25 @@
 from rest_framework import serializers
 from accounts.models import Profile
-from posts.models import Post
+from comments.models import Comment
 
 
 class AuthorSerializer(serializers.ModelSerializer):
-    """Small nested view of who wrote the post"""
     class Meta:
         model = Profile
         fields = ['username', 'image']
 
 
-class PostSerializer(serializers.ModelSerializer):
+class CommentSerializer(serializers.ModelSerializer):
     author = AuthorSerializer(source='author.profile', read_only=True)
     likes_count = serializers.SerializerMethodField()
     is_liked = serializers.SerializerMethodField()
-    hashtags = serializers.SerializerMethodField()
+    replies_count = serializers.SerializerMethodField()
 
     class Meta:
-        model = Post
+        model = Comment
         fields = [
-            'id', 'author', 'content', 'hashtags',
-            'likes_count', 'is_liked',
+            'id', 'author', 'content',
+            'likes_count', 'is_liked', 'replies_count',
             'created_date', 'updated_date'
         ]
         read_only_fields = ['id', 'author', 'created_date', 'updated_date']
@@ -28,7 +27,7 @@ class PostSerializer(serializers.ModelSerializer):
     def get_likes_count(self, obj):
         if hasattr(obj, 'likes_count'):
             return obj.likes_count
-        return obj.likes.count()
+        return obj.comment_likes.count()
 
     def get_is_liked(self, obj):
         if hasattr(obj, 'is_liked'):
@@ -36,7 +35,9 @@ class PostSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if not request or not request.user.is_authenticated:
             return False
-        return obj.likes.filter(user=request.user).exists()
+        return obj.comment_likes.filter(user=request.user).exists()
 
-    def get_hashtags(self, obj):
-        return [tag.name for tag in obj.hashtags.all()]
+    def get_replies_count(self, obj):
+        if hasattr(obj, 'replies_count'):
+            return obj.replies_count
+        return obj.replies.count()

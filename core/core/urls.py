@@ -28,6 +28,8 @@ urlpatterns = [
     # api urls
     path('api/v1/accounts/', include('accounts.api.v1.urls')),
     path('api/v1/posts/', include('posts.api.v1.urls')),
+    path('api/v1/posts/<int:post_pk>/comments/', include('comments.api.v1.urls')),
+    path('api/v1/hashtags/', include('hashtags.api.v1.urls')),
 ]
 # serve media and static files during development
 if settings.DEBUG:

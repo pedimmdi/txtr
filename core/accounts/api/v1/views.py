@@ -13,12 +13,14 @@ from .serializers import (
     ProfileSerializer, UserSerializer, UserUpdateSerializer,
     PublicProfileSerializer, CustomTokenObtainPairSerializer
 )
+from core.throttles import AuthRateThrottle, FollowRateThrottle
 
 
 class UserRegisterView(APIView):
     """
     View to register a new user.
     """
+    throttle_classes = [AuthRateThrottle]
     serializer_class = UserSerializer
     # Only guest users can register. Logged-in users are blocked to prevent duplicate accounts.
     permission_classes = [OnlyAnonymousUsers]
@@ -78,6 +80,7 @@ class CustomUserLoginView(TokenObtainPairView):
     """
     Custom login view that returns user information along with tokens
     """
+    throttle_classes = [AuthRateThrottle]
     serializer_class = CustomTokenObtainPairSerializer
 
 
@@ -97,6 +100,7 @@ class FollowToggleView(APIView):
     """
     Follow or unfollow a user by username. Same request toggles the state.
     """
+    throttle_classes = [FollowRateThrottle]
     permission_classes = [IsAuthenticated]
 
     def post(self, request, username):
