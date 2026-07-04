@@ -44,3 +44,25 @@ class Like(models.Model):
     
     def __str__(self):
         return f"{self.user} liked post {self.post.id}"
+
+
+class Bookmark(models.Model):
+    """Represents a user saving a post for later."""
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='bookmarks'
+    )
+    post = models.ForeignKey(
+        Post,
+        on_delete=models.CASCADE,
+        related_name='bookmarks'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'post')
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.user} bookmarked post {self.post.id}"

@@ -14,13 +14,14 @@ class PostSerializer(serializers.ModelSerializer):
     author = AuthorSerializer(source='author.profile', read_only=True)
     likes_count = serializers.SerializerMethodField()
     is_liked = serializers.SerializerMethodField()
+    is_bookmarked = serializers.SerializerMethodField()
     hashtags = serializers.SerializerMethodField()
 
     class Meta:
         model = Post
         fields = [
             'id', 'author', 'content', 'hashtags',
-            'likes_count', 'is_liked',
+            'likes_count', 'is_liked', 'is_bookmarked',
             'created_date', 'updated_date'
         ]
         read_only_fields = ['id', 'author', 'created_date', 'updated_date']
@@ -37,6 +38,14 @@ class PostSerializer(serializers.ModelSerializer):
         if not request or not request.user.is_authenticated:
             return False
         return obj.likes.filter(user=request.user).exists()
+
+    def get_is_bookmarked(self, obj):
+        if hasattr(obj, 'is_bookmarked'):
+            return obj.is_bookmarked
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return False
+        return obj.bookmarks.filter(user=request.user).exists()
 
     def get_hashtags(self, obj):
         return [tag.name for tag in obj.hashtags.all()]

@@ -8,10 +8,10 @@ from rest_framework.permissions import (
 from django.shortcuts import get_object_or_404
 from rest_framework.pagination import PageNumberPagination
 from accounts.models import Profile, Follow
-from posts.models import Post, Like
+from posts.models import Post, Like, Bookmark
 from posts.permissions import IsAuthorOrReadOnly
-from .serializers import PostSerializer
 from core.throttles import PostCreateRateThrottle, LikeRateThrottle
+from .serializers import PostSerializer
 
 
 class StandardResultsSetPagination(PageNumberPagination):
@@ -30,11 +30,15 @@ def get_annotated_posts(user):
     ).prefetch_related(
         'hashtags'
     ).annotate(
-        likes_count=Count('likes')
+        likes_count=Count('likes', distinct=True)
     )
     if user and user.is_authenticated:
         user_likes = Like.objects.filter(post=OuterRef('pk'), user=user)
-        qs = qs.annotate(is_liked=Exists(user_likes))
+        user_bookmarks = Bookmark.objects.filter(post=OuterRef('pk'), user=user)
+        qs = qs.annotate(
+            is_liked=Exists(user_likes),
+            is_bookmarked=Exists(user_bookmarks),
+        )
     return qs
 
 
@@ -115,3 +119,38 @@ class LikeToggleView(APIView):
             return Response({'is_liked': False}, status=status.HTTP_200_OK)
 
         return Response({'is_liked': True}, status=status.HTTP_201_CREATED)
+
+
+class BookmarkToggleView(APIView):
+    """POST to bookmark, POST again to remove bookmark."""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        post = get_object_or_404(Post, pk=pk)
+        bookmark, created = Bookmark.objects.get_or_create(
+            user=request.user,
+            post=post
+        )
+
+        if not created:
+            bookmark.delete()
+            return Response({'is_bookmarked': False}, status=status.HTTP_200_OK)
+
+        return Response({'is_bookmarked': True}, status=status.HTTP_201_CREATED)
+
+
+class BookmarkListView(generics.ListAPIView):
+    """List all posts bookmarked by the authenticated user."""
+    serializer_class = PostSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = StandardResultsSetPagination
+    search_fields = ['content']
+    ordering_fields = ['created_date', 'likes_count']
+
+    def get_queryset(self):
+        bookmarked_post_ids = Bookmark.objects.filter(
+            user=self.request.user
+        ).values_list('post_id', flat=True)
+        return get_annotated_posts(self.request.user).filter(
+            id__in=bookmarked_post_ids
+        )

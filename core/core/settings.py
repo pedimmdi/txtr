@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     'posts',
     'comments',
     'hashtags',
+    'notifications',
 ]
 
 # Substituting a custom User model

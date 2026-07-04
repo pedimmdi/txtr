@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Post, Like
+from .models import Post, Like, Bookmark
 
 
 class PostAdmin(admin.ModelAdmin):
@@ -15,3 +15,10 @@ class LikeAdmin(admin.ModelAdmin):
     list_filter = ['created_date']
 
 admin.site.register(Like, LikeAdmin)
+
+
+class BookmarkAdmin(admin.ModelAdmin):
+    list_display = ['user', 'post', 'created_at']
+    list_filter = ['created_at']
+
+admin.site.register(Bookmark, BookmarkAdmin)

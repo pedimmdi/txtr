@@ -163,3 +163,17 @@ class FollowingListView(generics.ListAPIView):
 
     def get_serializer_context(self):
         return {'request': self.request}
+
+
+class UserSearchView(generics.ListAPIView):
+    """Search users by username."""
+    serializer_class = PublicProfileSerializer
+    permission_classes = [AllowAny]
+    pagination_class = StandardResultsSetPagination
+    search_fields = ['username']
+
+    def get_queryset(self):
+        return Profile.objects.select_related('user').all()
+
+    def get_serializer_context(self):
+        return {'request': self.request}
