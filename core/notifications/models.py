@@ -12,6 +12,7 @@ class Notification(models.Model):
         FOLLOW       = 'follow',       'Follow'
         REPOST       = 'repost',       'Repost'
         MENTION      = 'mention',      'Mention'
+        DIRECT_MESSAGE = 'direct_message', 'Direct Message'
 
     recipient = models.ForeignKey(
         settings.AUTH_USER_MODEL,

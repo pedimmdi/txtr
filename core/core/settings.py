@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     'comments',
     'hashtags',
     'notifications',
+    'direct_messages',
 ]
 
 # Substituting a custom User model

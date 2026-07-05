@@ -39,5 +39,7 @@ class NotificationSerializer(serializers.ModelSerializer):
                 f"{username} reposted your post",
             Notification.NotificationType.MENTION:
                 f"{username} mentioned you",
+            Notification.NotificationType.DIRECT_MESSAGE:
+                f"{username} sent you a message",
         }
         return messages.get(obj.notification_type, '')

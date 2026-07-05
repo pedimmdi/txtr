@@ -31,6 +31,7 @@ urlpatterns = [
     path('api/v1/posts/<int:post_pk>/comments/', include('comments.api.v1.urls')),
     path('api/v1/hashtags/', include('hashtags.api.v1.urls')),
     path('api/v1/notifications/', include('notifications.api.v1.urls')),
+    path('api/v1/dm/', include('direct_messages.api.v1.urls')),
 ]
 # serve media and static files during development
 if settings.DEBUG:
