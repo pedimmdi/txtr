@@ -9,7 +9,14 @@ class Post(models.Model):
         on_delete=models.CASCADE,
         related_name='posts'
     )
-    content = models.CharField(max_length=1000)
+    content = models.CharField(max_length=1000, blank=True)
+    original_post = models.ForeignKey(
+        'self',
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name='reposts'
+    )
     hashtags = models.ManyToManyField(
         'hashtags.Hashtag',
         blank=True,
@@ -22,6 +29,8 @@ class Post(models.Model):
         ordering = ['-created_date']
 
     def __str__(self):
+        if self.original_post:
+            return f"{self.author} reposted post {self.original_post.id}"
         return f"{self.author} - {self.content[:30]}"
 
 

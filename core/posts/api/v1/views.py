@@ -26,18 +26,22 @@ def get_annotated_posts(user):
     Solves the N+1 query problem.
     """
     qs = Post.objects.select_related(
-        'author', 'author__profile'
+        'author', 'author__profile',
+        'original_post', 'original_post__author', 'original_post__author__profile'
     ).prefetch_related(
         'hashtags'
     ).annotate(
-        likes_count=Count('likes', distinct=True)
-    )
+        likes_count=Count('likes', distinct=True),
+        reposts_count=Count('reposts', distinct=True),
+    ).order_by('-created_date')
     if user and user.is_authenticated:
         user_likes = Like.objects.filter(post=OuterRef('pk'), user=user)
         user_bookmarks = Bookmark.objects.filter(post=OuterRef('pk'), user=user)
+        user_reposts = Post.objects.filter(original_post=OuterRef('pk'), author=user)
         qs = qs.annotate(
             is_liked=Exists(user_likes),
             is_bookmarked=Exists(user_bookmarks),
+            is_reposted=Exists(user_reposts),
         )
     return qs
 
@@ -154,3 +158,65 @@ class BookmarkListView(generics.ListAPIView):
         return get_annotated_posts(self.request.user).filter(
             id__in=bookmarked_post_ids
         )
+
+
+class RepostToggleView(APIView):
+    """
+    POST to repost, POST again to undo the repost.
+    Only original posts can be reposted (no repost of a repost).
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        original_post = get_object_or_404(Post, pk=pk, original_post=None)
+
+        if original_post.author == request.user:
+            return Response(
+                {'error': 'You cannot repost your own post'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        existing_repost = Post.objects.filter(
+            author=request.user,
+            original_post=original_post
+        ).first()
+
+        if existing_repost:
+            existing_repost.delete()
+            return Response({'is_reposted': False}, status=status.HTTP_200_OK)
+
+        Post.objects.create(
+            author=request.user,
+            original_post=original_post,
+            content=''
+        )
+        return Response({'is_reposted': True}, status=status.HTTP_201_CREATED)
+
+
+class QuoteRepostView(APIView):
+    """
+    Repost a post with added comment (Quote Tweet style).
+    A quote repost is just a new Post with content + original_post set.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        original_post = get_object_or_404(Post, pk=pk, original_post=None)
+        content = request.data.get('content', '').strip()
+
+        if not content:
+            return Response(
+                {'error': 'Content is required for a quote repost'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        post = Post.objects.create(
+            author=request.user,
+            original_post=original_post,
+            content=content
+        )
+        serializer = PostSerializer(
+            get_annotated_posts(request.user).get(pk=post.pk),
+            context={'request': request}
+        )
+        return Response(serializer.data, status=status.HTTP_201_CREATED)

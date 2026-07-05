@@ -35,5 +35,9 @@ class NotificationSerializer(serializers.ModelSerializer):
                 f"{username} liked your comment",
             Notification.NotificationType.FOLLOW:
                 f"{username} started following you",
+            Notification.NotificationType.REPOST:
+                f"{username} reposted your post",
+            Notification.NotificationType.MENTION:
+                f"{username} mentioned you",
         }
         return messages.get(obj.notification_type, '')

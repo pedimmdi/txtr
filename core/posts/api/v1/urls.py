@@ -1,8 +1,10 @@
 from django.urls import path
 from .views import (
     PostListCreateView, PostDetailView,
-    UserPostsListView, FeedView, LikeToggleView,
+    UserPostsListView, FeedView,
+    LikeToggleView,
     BookmarkToggleView, BookmarkListView,
+    RepostToggleView, QuoteRepostView,
 )
 
 
@@ -13,5 +15,7 @@ urlpatterns = [
     path('<int:pk>/', PostDetailView.as_view(), name='post-detail'),
     path('<int:pk>/like/', LikeToggleView.as_view(), name='post-like-toggle'),
     path('<int:pk>/bookmark/', BookmarkToggleView.as_view(), name='post-bookmark-toggle'),
+    path('<int:pk>/repost/', RepostToggleView.as_view(), name='post-repost-toggle'),
+    path('<int:pk>/quote/', QuoteRepostView.as_view(), name='post-quote-repost'),
     path('users/<str:username>/', UserPostsListView.as_view(), name='user-posts'),
 ]

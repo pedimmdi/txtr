@@ -10,6 +10,8 @@ class Notification(models.Model):
         REPLY        = 'reply',        'Reply'
         COMMENT_LIKE = 'comment_like', 'Comment Like'
         FOLLOW       = 'follow',       'Follow'
+        REPOST       = 'repost',       'Repost'
+        MENTION      = 'mention',      'Mention'
 
     recipient = models.ForeignKey(
         settings.AUTH_USER_MODEL,
