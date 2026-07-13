@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Create account — txtr{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/auth.css' %}" />
+{% endblock %}
+
+{% block guest_content %}
+<div class="auth-wrapper">
+
+  <!-- Left Panel — Brand -->
+  <div class="auth-panel-brand">
+    <div class="auth-brand-content">
+
+      <div class="auth-brand-logo">
+        <div class="auth-brand-mark">tx</div>
+        <span class="auth-brand-name">txtr</span>
+      </div>
+
+      <h1 class="auth-tagline">
+        Say it plain.<br />
+        Say it <span>loud.</span>
+      </h1>
+      <p class="auth-subtext">
+        A minimal, text-only social network. No noise, no algorithms — just words and people.
+      </p>
+
+      <ul class="auth-features">
+        <li class="auth-feature">
+          <span class="auth-feature-dot"></span>
+          Follow people, not topics
+        </li>
+        <li class="auth-feature">
+          <span class="auth-feature-dot"></span>
+          Post, reply, repost — all in plain text
+        </li>
+        <li class="auth-feature">
+          <span class="auth-feature-dot"></span>
+          Private messages with no tracking
+        </li>
+      </ul>
+
+    </div>
+  </div>
+
+  <!-- Right Panel — Form -->
+  <div class="auth-panel-form">
+    <h2 class="auth-form-title">Create your account</h2>
+    <p class="auth-form-subtitle">
+      Already have one? <a href="{% url 'login' %}">Log in</a>
+    </p>
+
+    {% if form.non_field_errors %}
+      <div class="form-alert">
+        {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+      </div>
+    {% endif %}
+
+    <form method="POST" action="{% url 'register' %}" id="register-form" novalidate>
+      {% csrf_token %}
+
+      <!-- Email -->
+      <div class="form-group">
+        <label class="form-label" for="id_email">Email address</label>
+        <input
+          class="form-input {% if form.email.errors %}error{% endif %}"
+          type="email"
+          id="id_email"
+          name="email"
+          placeholder="you@example.com"
+          value="{{ form.email.value|default:'' }}"
+          autocomplete="email"
+          autofocus
+          required
+        />
+        {% if form.email.errors %}
+          <span class="form-error">{{ form.email.errors.0 }}</span>
+        {% endif %}
+      </div>
+
+      <!-- Username -->
+      <div class="form-group">
+        <label class="form-label" for="id_username">Username</label>
+        <input
+          class="form-input {% if form.username.errors %}error{% endif %}"
+          type="text"
+          id="id_username"
+          name="username"
+          placeholder="name"
+          value="{{ form.username.value|default:'' }}"
+          autocomplete="username"
+          maxlength="30"
+          required
+        />
+        {% if form.username.errors %}
+          <span class="form-error">{{ form.username.errors.0 }}</span>
+        {% else %}
+          <span class="form-hint">Letters, numbers, and underscores only.</span>
+        {% endif %}
+      </div>
+
+      <!-- Password -->
+      <div class="form-group">
+        <label class="form-label" for="id_password1">Password</label>
+        <div class="form-input-wrapper">
+          <input
+            class="form-input {% if form.password1.errors %}error{% endif %}"
+            type="password"
+            id="id_password1"
+            name="password1"
+            placeholder="Min. 8 characters"
+            autocomplete="new-password"
+            required
+          />
+          <button type="button" class="form-input-toggle" data-toggle="id_password1" aria-label="Show password">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+          </button>
+        </div>
+        {% if form.password1.errors %}
+          <span class="form-error">{{ form.password1.errors.0 }}</span>
+        {% endif %}
+        <div class="password-strength" id="password-strength">
+          <div class="strength-bar">
+            <div class="strength-fill" id="strength-fill"></div>
+          </div>
+          <span class="strength-label" id="strength-label">Too short</span>
+        </div>
+      </div>
+
+      <!-- Confirm Password -->
+      <div class="form-group">
+        <label class="form-label" for="id_password2">Confirm password</label>
+        <div class="form-input-wrapper">
+          <input
+            class="form-input {% if form.password2.errors %}error{% endif %}"
+            type="password"
+            id="id_password2"
+            name="password2"
+            placeholder="Repeat your password"
+            autocomplete="new-password"
+            required
+          />
+          <button type="button" class="form-input-toggle" data-toggle="id_password2" aria-label="Show password">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+          </button>
+        </div>
+        {% if form.password2.errors %}
+          <span class="form-error">{{ form.password2.errors.0 }}</span>
+        {% endif %}
+      </div>
+
+      <!-- Submit -->
+      <button type="submit" class="auth-submit" id="submit-btn">
+        <span class="btn-text">Create account</span>
+        <span class="btn-spinner"></span>
+      </button>
+
+    </form>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/auth.js' %}"></script>
+{% endblock %}

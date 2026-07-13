@@ -32,6 +32,9 @@ urlpatterns = [
     path('api/v1/hashtags/', include('hashtags.api.v1.urls')),
     path('api/v1/notifications/', include('notifications.api.v1.urls')),
     path('api/v1/dm/', include('direct_messages.api.v1.urls')),
+    # template urls
+    path('', include('accounts.urls')),
+    path('', include('posts.urls')),
 ]
 # serve media and static files during development
 if settings.DEBUG:

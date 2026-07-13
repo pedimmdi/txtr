@@ -8,7 +8,7 @@ class CustomUserAdmin(UserAdmin):
     list_display = ['email', 'created_date', 'is_active', 'is_staff']
     search_fields = ['email']
     list_filter = ['is_active', 'is_staff', 'is_superuser']
-    ordering = ['created_date']
+    ordering = ['-created_date']
     fieldsets = [
         ("Personal info", {'fields': [
             'email', 'password'

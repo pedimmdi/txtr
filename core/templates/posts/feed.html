@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Home — txtr{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/feed.css' %}" />
+{% endblock %}
+
+{% block content %}
+
+<!-- ── Page Header ───────────────────────────────────────── -->
+<header class="page-header">
+  <span class="page-title">Home</span>
+</header>
+
+<!-- ── Compose Box ───────────────────────────────────────── -->
+<div class="compose">
+  <div class="compose-inner">
+
+    <!-- Author avatar -->
+    {% if request.user.profile.image %}
+      <img src="{{ request.user.profile.image.url }}"
+           alt="{{ request.user.profile.username }}"
+           class="avatar avatar-md" />
+    {% else %}
+      <div class="avatar-placeholder avatar-md">
+        {{ request.user.profile.username|first|upper }}
+      </div>
+    {% endif %}
+
+    <div class="compose-body">
+      <textarea
+        id="compose-textarea"
+        class="compose-textarea"
+        placeholder="What's on your mind?"
+        maxlength="1000"
+        rows="2"
+      ></textarea>
+
+      <div class="compose-divider"></div>
+
+      <div class="compose-footer">
+        <div class="compose-tools">
+          <!-- Hashtag hint -->
+          <button class="compose-tool" title="Add hashtag" type="button" id="compose-hashtag">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/>
+              <line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="compose-right">
+          <span class="char-counter" id="char-counter">1000</span>
+          <button class="compose-submit" id="compose-submit" disabled>Post</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Post List ─────────────────────────────────────────── -->
+<div class="post-list" id="post-list">
+  {% for post in posts %}
+    {% include "posts/_post_card.html" with post=post %}
+  {% empty %}
+    <div class="empty-state">
+      <div class="empty-state-icon">✦</div>
+      <div class="empty-state-title">Your feed is empty</div>
+      <p class="empty-state-text">Follow some people to see their posts here.</p>
+      <a href="{% url 'explore' %}" class="btn btn-primary btn-sm" style="margin-top:8px;">
+        Explore users
+      </a>
+    </div>
+  {% endfor %}
+</div>
+
+<!-- ── Pagination ────────────────────────────────────────── -->
+{% if posts.has_other_pages %}
+<div class="pagination">
+  {% if posts.has_previous %}
+    <a href="?page={{ posts.previous_page_number }}">&larr;</a>
+  {% else %}
+    <span class="disabled">&larr;</span>
+  {% endif %}
+
+  {% for num in posts.paginator.page_range %}
+    {% if posts.number == num %}
+      <span class="current">{{ num }}</span>
+    {% elif num > posts.number|add:"-3" and num < posts.number|add:"3" %}
+      <a href="?page={{ num }}">{{ num }}</a>
+    {% endif %}
+  {% endfor %}
+
+  {% if posts.has_next %}
+    <a href="?page={{ posts.next_page_number }}">&rarr;</a>
+  {% else %}
+    <span class="disabled">&rarr;</span>
+  {% endif %}
+</div>
+{% endif %}
+
+{% endblock %}
+
+<!-- ── Right Sidebar ─────────────────────────────────────── -->
+{% block sidebar_right %}
+
+<!-- Search -->
+<form method="GET" action="{% url 'explore' %}">
+  <div class="search-box">
+    <svg class="search-box-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="2" stroke-linecap="round">
+      <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+    </svg>
+    <input type="text" name="search" placeholder="Search txtr" autocomplete="off" />
+  </div>
+</form>
+
+<!-- Trending Hashtags -->
+{% if trending_hashtags %}
+<div class="widget">
+  <div class="widget-title">Trending</div>
+  {% for tag in trending_hashtags %}
+    <a href="{% url 'hashtag-posts' tag.name %}" class="trending-item">
+      <span class="trending-label">Hashtag</span>
+      <span class="trending-tag">#{{ tag.name }}</span>
+      <span class="trending-count">{{ tag.posts_count }} post{{ tag.posts_count|pluralize }}</span>
+    </a>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- Who to Follow -->
+{% if suggested_users %}
+<div class="widget">
+  <div class="widget-title">Who to follow</div>
+  {% for profile in suggested_users %}
+    <div class="who-to-follow-item">
+      <a href="{% url 'profile' profile.username %}">
+        {% if profile.image %}
+          <img src="{{ profile.image.url }}" alt="{{ profile.username }}" class="avatar avatar-md" />
+        {% else %}
+          <div class="avatar-placeholder avatar-md">{{ profile.username|first|upper }}</div>
+        {% endif %}
+      </a>
+      <div class="who-to-follow-info">
+        <a href="{% url 'profile' profile.username %}" class="who-to-follow-name">
+          {{ profile.username }}
+        </a>
+        <div class="who-to-follow-handle">@{{ profile.username }}</div>
+      </div>
+      <button
+        class="btn btn-outline btn-sm follow-btn"
+        data-username="{{ profile.username }}"
+        data-following="false"
+      >Follow</button>
+    </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/feed.js' %}"></script>
+{% endblock %}

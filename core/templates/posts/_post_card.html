@@ -1,0 +1,206 @@
+{% load static %}
+{% load humanize %}
+
+<article class="post-card" data-post-id="{{ post.id }}">
+
+  <!-- Repost Label -->
+  {% if post.original_post %}
+    <div class="repost-label">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+        <polyline points="17 1 21 5 17 9"/>
+        <path d="M3 11V9a4 4 0 014-4h14"/>
+        <polyline points="7 23 3 19 7 15"/>
+        <path d="M21 13v2a4 4 0 01-4 4H3"/>
+      </svg>
+      <a href="{% url 'profile' post.author.profile.username %}">
+        {{ post.author.profile.username }}
+      </a>
+      reposted
+    </div>
+  {% endif %}
+
+  <div class="post-inner">
+
+    <!-- Avatar -->
+    {% if post.original_post %}
+      {% with original_author=post.original_post.author.profile %}
+        <a href="{% url 'profile' original_author.username %}">
+          {% if original_author.image %}
+            <img src="{{ original_author.image.url }}" alt="{{ original_author.username }}"
+                 class="avatar avatar-md" />
+          {% else %}
+            <div class="avatar-placeholder avatar-md">{{ original_author.username|first|upper }}</div>
+          {% endif %}
+        </a>
+      {% endwith %}
+    {% else %}
+      <a href="{% url 'profile' post.author.profile.username %}">
+        {% if post.author.profile.image %}
+          <img src="{{ post.author.profile.image.url }}" alt="{{ post.author.profile.username }}"
+               class="avatar avatar-md" />
+        {% else %}
+          <div class="avatar-placeholder avatar-md">
+            {{ post.author.profile.username|first|upper }}
+          </div>
+        {% endif %}
+      </a>
+    {% endif %}
+
+    <div class="post-body">
+
+      <!-- Header -->
+      <div class="post-header">
+        {% if post.original_post %}
+          {% with original_author=post.original_post.author.profile %}
+            <a href="{% url 'profile' original_author.username %}" class="post-author-name">
+              {{ original_author.username }}
+            </a>
+            <span class="post-author-handle">@{{ original_author.username }}</span>
+          {% endwith %}
+        {% else %}
+          <a href="{% url 'profile' post.author.profile.username %}" class="post-author-name">
+            {{ post.author.profile.username }}
+          </a>
+          <span class="post-author-handle">@{{ post.author.profile.username }}</span>
+        {% endif %}
+
+        <span class="post-dot">·</span>
+        <a href="{% url 'post-detail' post.id %}" class="post-date"
+           title="{{ post.created_date }}">
+          {{ post.created_date|naturaltime }}
+        </a>
+
+        <!-- Post menu (only for post author) -->
+        {% if request.user == post.author %}
+          <button class="post-menu-btn" data-post-id="{{ post.id }}"
+                  onclick="event.stopPropagation(); openPostMenu({{ post.id }}, this)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/>
+            </svg>
+          </button>
+        {% endif %}
+      </div>
+
+      <!-- Content -->
+      {% if post.original_post %}
+        <!-- Pure repost: show original content in a quoted box -->
+        {% if not post.content %}
+          <div class="post-content">{{ post.original_post.content|linebreaksbr }}</div>
+        {% else %}
+          <!-- Quote repost: show quote content + original in box -->
+          <div class="post-content">{{ post.content|linebreaksbr }}</div>
+          <a href="{% url 'post-detail' post.original_post.id %}" class="quoted-post">
+            <div class="quoted-post-header">
+              <span class="quoted-post-author">{{ post.original_post.author.profile.username }}</span>
+              <span class="quoted-post-handle">@{{ post.original_post.author.profile.username }}</span>
+            </div>
+            <div class="quoted-post-content">{{ post.original_post.content|truncatechars:200 }}</div>
+          </a>
+        {% endif %}
+      {% else %}
+        <div class="post-content">{{ post.content|linebreaksbr }}</div>
+      {% endif %}
+
+      <!-- Hashtags -->
+      {% if post.hashtags.all %}
+        <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px;">
+          {% for tag in post.hashtags.all %}
+            <a href="{% url 'hashtag-posts' tag.name %}"
+               style="font-size:13px; color:var(--accent); font-weight:500;">
+              #{{ tag.name }}
+            </a>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <!-- Action Bar -->
+      <div class="post-actions" onclick="event.stopPropagation()">
+
+        <!-- Comment -->
+        <a href="{% url 'post-detail' post.id %}" class="action-btn comment-btn">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+            <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+          </svg>
+          <span>{{ post.comments.count }}</span>
+        </a>
+
+        <!-- Repost -->
+        {% if request.user.is_authenticated and request.user != post.author and not post.original_post %}
+          <button
+            class="action-btn {% if post.is_reposted %}reposted{% endif %}"
+            data-action="repost"
+            data-post-id="{{ post.id }}"
+            data-reposted="{{ post.is_reposted|lower }}"
+          >
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+              <polyline points="17 1 21 5 17 9"/>
+              <path d="M3 11V9a4 4 0 014-4h14"/>
+              <polyline points="7 23 3 19 7 15"/>
+              <path d="M21 13v2a4 4 0 01-4 4H3"/>
+            </svg>
+            <span class="repost-count">{{ post.reposts_count }}</span>
+          </button>
+        {% else %}
+          <span class="action-btn" style="cursor:default;">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+              <polyline points="17 1 21 5 17 9"/>
+              <path d="M3 11V9a4 4 0 014-4h14"/>
+              <polyline points="7 23 3 19 7 15"/>
+              <path d="M21 13v2a4 4 0 01-4 4H3"/>
+            </svg>
+            <span>{{ post.reposts_count }}</span>
+          </span>
+        {% endif %}
+
+        <!-- Like -->
+        {% if request.user.is_authenticated %}
+          <button
+            class="action-btn {% if post.is_liked %}liked{% endif %}"
+            data-action="like"
+            data-post-id="{{ post.id }}"
+            data-liked="{{ post.is_liked|lower }}"
+          >
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="{% if post.is_liked %}var(--like){% else %}none{% endif %}"
+                 stroke="{% if post.is_liked %}var(--like){% else %}currentColor{% endif %}"
+                 stroke-width="1.8" stroke-linecap="round">
+              <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/>
+            </svg>
+            <span class="like-count">{{ post.likes_count }}</span>
+          </button>
+        {% else %}
+          <span class="action-btn" style="cursor:default;">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+              <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/>
+            </svg>
+            <span>{{ post.likes_count }}</span>
+          </span>
+        {% endif %}
+
+        <span class="action-spacer"></span>
+
+        <!-- Bookmark -->
+        {% if request.user.is_authenticated %}
+          <button
+            class="action-btn {% if post.is_bookmarked %}bookmarked{% endif %}"
+            data-action="bookmark"
+            data-post-id="{{ post.id }}"
+            data-bookmarked="{{ post.is_bookmarked|lower }}"
+          >
+            <svg width="17" height="17" viewBox="0 0 24 24"
+                 fill="{% if post.is_bookmarked %}var(--accent){% else %}none{% endif %}"
+                 stroke="{% if post.is_bookmarked %}var(--accent){% else %}currentColor{% endif %}"
+                 stroke-width="1.8" stroke-linecap="round">
+              <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/>
+            </svg>
+          </button>
+        {% endif %}
+
+      </div>
+      <!-- /actions -->
+
+    </div>
+    <!-- /post-body -->
+  </div>
+  <!-- /post-inner -->
+
+</article>
