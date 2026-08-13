@@ -22,19 +22,20 @@ from rest_framework_simplejwt.views import TokenRefreshView
 
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    # jwt token authentication urls
+    path('admin/',             admin.site.urls),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    # api urls
-    path('api/v1/accounts/', include('accounts.api.v1.urls')),
-    path('api/v1/posts/', include('posts.api.v1.urls')),
+    # API
+    path('api/v1/accounts/',   include('accounts.api.v1.urls')),
+    path('api/v1/posts/',      include('posts.api.v1.urls')),
     path('api/v1/posts/<int:post_pk>/comments/', include('comments.api.v1.urls')),
-    path('api/v1/hashtags/', include('hashtags.api.v1.urls')),
+    path('api/v1/hashtags/',   include('hashtags.api.v1.urls')),
     path('api/v1/notifications/', include('notifications.api.v1.urls')),
-    path('api/v1/dm/', include('direct_messages.api.v1.urls')),
-    # template urls
+    path('api/v1/dm/',         include('direct_messages.api.v1.urls')),
+    # Templates
     path('', include('accounts.urls')),
     path('', include('posts.urls')),
+    path('', include('notifications.urls')),
+    path('', include('direct_messages.urls')),
 ]
 # serve media and static files during development
 if settings.DEBUG:

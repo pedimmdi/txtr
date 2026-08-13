@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}{{ post.author.profile.username }} on txtr{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/feed.css' %}" />
+<link rel="stylesheet" href="{% static 'css/post_detail.css' %}" />
+{% endblock %}
+
+{% block content %}
+
+<!-- ── Page Header ───────────────────────────────────────── -->
+<header class="page-header">
+  <a href="javascript:history.back()" class="page-header-back">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+      <line x1="19" y1="12" x2="5" y2="12"/>
+      <polyline points="12 19 5 12 12 5"/>
+    </svg>
+  </a>
+  <span class="page-title">Post</span>
+</header>
+
+<!-- ── Full Post ─────────────────────────────────────────── -->
+<div class="post-full">
+
+  <!-- Author header -->
+  <div class="post-header">
+    <a href="{% url 'profile' post.author.profile.username %}">
+      {% if post.author.profile.image %}
+        <img src="{{ post.author.profile.image.url }}" alt="{{ post.author.profile.username }}"
+             class="avatar avatar-lg" />
+      {% else %}
+        <div class="avatar-placeholder avatar-lg">
+          {{ post.author.profile.username|first|upper }}
+        </div>
+      {% endif %}
+    </a>
+    <div style="flex:1; min-width:0;">
+      <a href="{% url 'profile' post.author.profile.username %}" class="post-author-name d-block">
+        {{ post.author.profile.username }}
+      </a>
+      <span class="post-author-handle">@{{ post.author.profile.username }}</span>
+    </div>
+    {% if request.user == post.author %}
+      <div style="display:flex; gap:8px;">
+        <a href="{% url 'post-edit' post.id %}" class="btn btn-outline btn-sm">Edit</a>
+        <button class="btn btn-danger btn-sm" id="delete-post-btn">Delete</button>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Content -->
+  {% if post.original_post and not post.content %}
+    <!-- Pure repost: show original -->
+    <div class="post-full-content">{{ post.original_post.content }}</div>
+  {% elif post.original_post and post.content %}
+    <!-- Quote repost -->
+    <div class="post-full-content">{{ post.content }}</div>
+    <a href="{% url 'post-detail' post.original_post.id %}" class="quoted-post">
+      <div class="quoted-post-header">
+        <span class="quoted-post-author">{{ post.original_post.author.profile.username }}</span>
+        <span class="quoted-post-handle">@{{ post.original_post.author.profile.username }}</span>
+      </div>
+      <div class="quoted-post-content">{{ post.original_post.content }}</div>
+    </a>
+  {% else %}
+    <div class="post-full-content" id="post-content-display">{{ post.content }}</div>
+  {% endif %}
+
+  <!-- Hashtags -->
+  {% if post.hashtags.all %}
+    <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:14px;">
+      {% for tag in post.hashtags.all %}
+        <a href="{% url 'hashtag-posts' tag.name %}"
+           style="font-size:14px; color:var(--accent); font-weight:500;">
+          #{{ tag.name }}
+        </a>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <!-- Timestamp -->
+  <div class="post-full-meta">
+    <span>{{ post.created_date|date:"g:i A" }}</span>
+    <span class="sep">·</span>
+    <span>{{ post.created_date|date:"M j, Y" }}</span>
+  </div>
+
+  <!-- Stats -->
+  <div class="post-full-stats">
+    <span class="post-stat">
+      <strong id="reposts-count">{{ post.reposts_count }}</strong> Reposts
+    </span>
+    <span class="post-stat">
+      <strong id="likes-count">{{ post.likes_count }}</strong> Likes
+    </span>
+    <span class="post-stat">
+      <strong id="comments-count">0</strong> Comments
+    </span>
+  </div>
+
+  <!-- Action Bar -->
+  <div class="post-full-actions">
+
+    <!-- Comment (scroll down) -->
+    <button class="action-btn" onclick="document.getElementById('comment-input').focus()">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+        <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+      </svg>
+    </button>
+
+    <!-- Repost -->
+    {% if request.user.is_authenticated and request.user != post.author and not post.original_post %}
+      <button class="action-btn {% if post.is_reposted %}reposted{% endif %}"
+              data-action="repost"
+              data-post-id="{{ post.id }}"
+              data-reposted="{{ post.is_reposted|lower }}">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+          <polyline points="17 1 21 5 17 9"/>
+          <path d="M3 11V9a4 4 0 014-4h14"/>
+          <polyline points="7 23 3 19 7 15"/>
+          <path d="M21 13v2a4 4 0 01-4 4H3"/>
+        </svg>
+      </button>
+    {% endif %}
+
+    <!-- Like -->
+    {% if request.user.is_authenticated %}
+      <button class="action-btn {% if post.is_liked %}liked{% endif %}"
+              data-action="like"
+              data-post-id="{{ post.id }}"
+              data-liked="{{ post.is_liked|lower }}">
+        <svg width="20" height="20" viewBox="0 0 24 24"
+             fill="{% if post.is_liked %}var(--like){% else %}none{% endif %}"
+             stroke="{% if post.is_liked %}var(--like){% else %}currentColor{% endif %}"
+             stroke-width="1.8" stroke-linecap="round">
+          <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/>
+        </svg>
+      </button>
+    {% endif %}
+
+    <!-- Bookmark -->
+    {% if request.user.is_authenticated %}
+      <button class="action-btn {% if post.is_bookmarked %}bookmarked{% endif %}"
+              data-action="bookmark"
+              data-post-id="{{ post.id }}"
+              data-bookmarked="{{ post.is_bookmarked|lower }}">
+        <svg width="20" height="20" viewBox="0 0 24 24"
+             fill="{% if post.is_bookmarked %}var(--accent){% else %}none{% endif %}"
+             stroke="{% if post.is_bookmarked %}var(--accent){% else %}currentColor{% endif %}"
+             stroke-width="1.8" stroke-linecap="round">
+          <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/>
+        </svg>
+      </button>
+    {% endif %}
+
+  </div>
+</div>
+<!-- /post-full -->
+
+<!-- ── Comment Compose ────────────────────────────────────── -->
+{% if request.user.is_authenticated %}
+<div class="comment-compose">
+  {% if request.user.profile.image %}
+    <img src="{{ request.user.profile.image.url }}" alt=""
+         class="avatar avatar-md" />
+  {% else %}
+    <div class="avatar-placeholder avatar-md">
+      {{ request.user.profile.username|first|upper }}
+    </div>
+  {% endif %}
+
+  <div class="comment-compose-body">
+    <textarea
+      id="comment-input"
+      class="comment-input"
+      placeholder="Post your reply"
+      maxlength="500"
+      rows="2"
+    ></textarea>
+    <div class="comment-compose-footer">
+      <span class="comment-char-counter" id="comment-char-counter">500</span>
+      <button class="comment-submit" id="comment-submit" disabled>Reply</button>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- ── Comments Section ───────────────────────────────────── -->
+<div class="comments-section" id="comments-section">
+  <div class="comments-loading">
+    <div class="spinner"></div>
+    <span>Loading replies…</span>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<!-- Pass Django context to JS -->
+<script>
+  window.POST_ID       = {{ post.id }};
+  window.IS_AUTH       = {{ request.user.is_authenticated|lower }};
+  window.CURRENT_USER  = "{{ request.user.profile.username|default:'' }}";
+  window.CURRENT_AVATAR = "{{ request.user.profile.image.url|default:'' }}";
+</script>
+<script src="{% static 'js/feed.js' %}"></script>
+<script src="{% static 'js/post_detail.js' %}"></script>
+{% endblock %}

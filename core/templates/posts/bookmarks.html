@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Bookmarks — txtr{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/feed.css' %}" />
+{% endblock %}
+
+{% block content %}
+
+<!-- ── Page Header ───────────────────────────────────────── -->
+<header class="page-header">
+  <a href="javascript:history.back()" class="page-header-back">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+         stroke-width="2.5" stroke-linecap="round">
+      <line x1="19" y1="12" x2="5" y2="12"/>
+      <polyline points="12 19 5 12 12 5"/>
+    </svg>
+  </a>
+  <div>
+    <div class="page-title">Bookmarks</div>
+    <div style="font-size:12px; color:var(--text-muted);">
+      @{{ request.user.profile.username }}
+    </div>
+  </div>
+</header>
+
+<!-- ── Bookmarked Posts ───────────────────────────────────── -->
+<div class="post-list">
+  {% for post in posts %}
+    {% include "posts/_post_card.html" with post=post %}
+  {% empty %}
+    <div class="empty-state">
+      <div class="empty-state-icon">🔖</div>
+      <div class="empty-state-title">No bookmarks yet</div>
+      <p class="empty-state-text">
+        Save posts for later by tapping the bookmark icon on any post.
+      </p>
+      <a href="{% url 'feed' %}" class="btn btn-primary btn-sm" style="margin-top:8px;">
+        Back to feed
+      </a>
+    </div>
+  {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if posts.has_other_pages %}
+  <div class="pagination">
+    {% if posts.has_previous %}
+      <a href="?page={{ posts.previous_page_number }}">&larr;</a>
+    {% else %}
+      <span class="disabled">&larr;</span>
+    {% endif %}
+    {% for num in posts.paginator.page_range %}
+      {% if posts.number == num %}
+        <span class="current">{{ num }}</span>
+      {% elif num > posts.number|add:"-3" and num < posts.number|add:"3" %}
+        <a href="?page={{ num }}">{{ num }}</a>
+      {% endif %}
+    {% endfor %}
+    {% if posts.has_next %}
+      <a href="?page={{ posts.next_page_number }}">&rarr;</a>
+    {% else %}
+      <span class="disabled">&rarr;</span>
+    {% endif %}
+  </div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/feed.js' %}"></script>
+{% endblock %}

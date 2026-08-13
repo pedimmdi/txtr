@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Messages — txtr{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/dm.css' %}" />
+{% endblock %}
+
+{% block content %}
+
+<!-- ── Page Header ───────────────────────────────────────── -->
+<header class="page-header">
+  <span class="page-title">Messages</span>
+  <button class="new-dm-btn" id="new-dm-btn" title="New message">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+         stroke-width="2" stroke-linecap="round">
+      <path d="M12 20h9"/>
+      <path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/>
+    </svg>
+  </button>
+</header>
+
+<!-- ── Conversation List ─────────────────────────────────── -->
+{% if conversations %}
+  {% for conv in conversations %}
+    <a href="{% url 'conversation' conv.other_username %}" class="conversation-item {% if conv.unread_count > 0 %}unread{% endif %}">
+
+      <!-- Avatar -->
+      {% if conv.other_image %}
+        <img src="{{ conv.other_image }}" alt="{{ conv.other_username }}"
+             class="avatar avatar-lg" />
+      {% else %}
+        <div class="avatar-placeholder avatar-lg">
+          {{ conv.other_username|first|upper }}
+        </div>
+      {% endif %}
+
+      <!-- Body -->
+      <div class="conversation-body">
+        <div class="conversation-header">
+          <span class="conversation-name">{{ conv.other_username }}</span>
+          {% if conv.last_message_time %}
+            <span class="conversation-time">{{ conv.last_message_time|naturaltime }}</span>
+          {% endif %}
+        </div>
+        <div class="conversation-preview">
+          {% if conv.last_message %}
+            {% if conv.last_sender == request.user.profile.username %}
+              You: {{ conv.last_message|truncatechars:50 }}
+            {% else %}
+              {{ conv.last_message|truncatechars:50 }}
+            {% endif %}
+          {% else %}
+            <em>No messages yet</em>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Unread badge -->
+      {% if conv.unread_count > 0 %}
+        <span class="conversation-unread-badge">{{ conv.unread_count }}</span>
+      {% endif %}
+
+    </a>
+  {% endfor %}
+
+{% else %}
+  <div class="empty-state">
+    <div class="empty-state-icon">✉</div>
+    <div class="empty-state-title">No messages yet</div>
+    <p class="empty-state-text">
+      Start a conversation by clicking the pencil icon above.
+    </p>
+  </div>
+{% endif %}
+
+<!-- ── New DM Modal ───────────────────────────────────────── -->
+<div class="new-dm-modal" id="new-dm-modal" style="display:none;">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">New message</span>
+      <button class="modal-close" id="new-dm-close">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2.5" stroke-linecap="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group" style="margin-bottom:0;">
+        <label class="form-label" for="dm-username-input">Send to</label>
+        <input
+          class="form-input"
+          type="text"
+          id="dm-username-input"
+          placeholder="Enter a username"
+          autocomplete="off"
+          autofocus
+        />
+        <span class="form-error" id="dm-username-error" style="display:none;margin-top:6px;">
+          User not found.
+        </span>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="new-dm-cancel">Cancel</button>
+      <button class="btn btn-primary" id="new-dm-go">Open chat</button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/dm.js' %}"></script>
+{% endblock %}

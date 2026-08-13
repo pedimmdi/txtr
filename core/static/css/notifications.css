@@ -1,0 +1,161 @@
+/* ============================================================
+   txtr — notifications.css
+   Notification list page
+   ============================================================ */
+
+/* ── Header Actions ──────────────────────────────────────── */
+.page-header-action {
+  margin-left: auto;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  padding: 6px 10px;
+  border-radius: var(--radius-md);
+  transition: background var(--transition);
+}
+.page-header-action:hover { background: var(--accent-dim); }
+
+/* ── Notification Item ───────────────────────────────────── */
+.notif-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background var(--transition);
+  position: relative;
+  text-decoration: none;
+  color: inherit;
+}
+
+.notif-item:hover { background: rgba(255,255,255,0.015); }
+
+/* Unread highlight */
+.notif-item.unread { background: rgba(124, 110, 255, 0.04); }
+.notif-item.unread:hover { background: rgba(124, 110, 255, 0.07); }
+
+/* Unread dot */
+.notif-unread-dot {
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+}
+
+/* ── Notification Icon ───────────────────────────────────── */
+.notif-icon-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.notif-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-full);
+  object-fit: cover;
+  background: var(--bg-elevated);
+}
+
+.notif-avatar-placeholder {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-full);
+  background: var(--accent-dim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 17px;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+/* Type icon badge */
+.notif-type-badge {
+  position: absolute;
+  bottom: -2px;
+  right: -4px;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  border: 2px solid var(--bg-primary);
+}
+
+.notif-type-badge.like     { background: var(--like); }
+.notif-type-badge.comment  { background: var(--accent); }
+.notif-type-badge.reply    { background: var(--accent); }
+.notif-type-badge.follow   { background: var(--success); }
+.notif-type-badge.repost   { background: var(--success); }
+.notif-type-badge.mention  { background: #f0a500; }
+.notif-type-badge.comment_like { background: var(--like); }
+.notif-type-badge.direct_message { background: var(--accent); }
+
+/* ── Notification Body ───────────────────────────────────── */
+.notif-body { flex: 1; min-width: 0; }
+
+.notif-message {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.notif-message strong { font-weight: 700; }
+
+.notif-time {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* Post preview inside notification */
+.notif-preview {
+  margin-top: 6px;
+  padding: 8px 12px;
+  background: var(--bg-elevated);
+  border-left: 2px solid var(--border-light);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  font-size: 13px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Empty State ─────────────────────────────────────────── */
+.notif-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  text-align: center;
+  gap: 10px;
+}
+
+.notif-empty-icon {
+  font-size: 44px;
+  margin-bottom: 4px;
+}
+
+.notif-empty-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.notif-empty-text {
+  font-size: 14px;
+  color: var(--text-muted);
+  max-width: 260px;
+  line-height: 1.5;
+}

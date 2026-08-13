@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Notifications — txtr{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/notifications.css' %}" />
+{% endblock %}
+
+{% block content %}
+
+<!-- ── Page Header ───────────────────────────────────────── -->
+<header class="page-header">
+  <span class="page-title">Notifications</span>
+  {% if notifications %}
+    <button class="page-header-action" id="mark-all-read">
+      Mark all as read
+    </button>
+  {% endif %}
+</header>
+
+<!-- ── Notification List ─────────────────────────────────── -->
+{% if notifications %}
+  <div id="notif-list">
+    {% for notif in notifications %}
+      <a
+        href="{% if notif.post_id %}{% url 'post-detail' notif.post_id %}{% elif notif.notification_type == 'follow' %}{% url 'profile' notif.sender.profile.username %}{% elif notif.notification_type == 'direct_message' %}{% url 'conversation' notif.sender.profile.username %}{% else %}#{% endif %}"
+        class="notif-item {% if not notif.is_read %}unread{% endif %}"
+        data-notif-id="{{ notif.id }}"
+      >
+        {% if not notif.is_read %}
+          <span class="notif-unread-dot"></span>
+        {% endif %}
+
+        <!-- Avatar + type badge -->
+        <div class="notif-icon-wrap">
+          {% if notif.sender.profile.image %}
+            <img src="{{ notif.sender.profile.image.url }}"
+                 alt="{{ notif.sender.profile.username }}"
+                 class="notif-avatar" />
+          {% else %}
+            <div class="notif-avatar-placeholder">
+              {{ notif.sender.profile.username|first|upper }}
+            </div>
+          {% endif %}
+
+          <span class="notif-type-badge {{ notif.notification_type }}">
+            {% if notif.notification_type == 'like' or notif.notification_type == 'comment_like' %}
+              ♥
+            {% elif notif.notification_type == 'comment' or notif.notification_type == 'reply' %}
+              💬
+            {% elif notif.notification_type == 'follow' %}
+              ✓
+            {% elif notif.notification_type == 'repost' %}
+              ↺
+            {% elif notif.notification_type == 'mention' %}
+              @
+            {% elif notif.notification_type == 'direct_message' %}
+              ✉
+            {% endif %}
+          </span>
+        </div>
+
+        <!-- Body -->
+        <div class="notif-body">
+          <div class="notif-message">
+            <strong>{{ notif.sender.profile.username }}</strong>
+            {% if notif.notification_type == 'like' %}
+              liked your post
+            {% elif notif.notification_type == 'comment' %}
+              commented on your post
+            {% elif notif.notification_type == 'reply' %}
+              replied to your comment
+            {% elif notif.notification_type == 'comment_like' %}
+              liked your comment
+            {% elif notif.notification_type == 'follow' %}
+              started following you
+            {% elif notif.notification_type == 'repost' %}
+              reposted your post
+            {% elif notif.notification_type == 'mention' %}
+              mentioned you
+            {% elif notif.notification_type == 'direct_message' %}
+              sent you a message
+            {% endif %}
+          </div>
+
+          <!-- Post preview -->
+          {% if notif.post %}
+            <div class="notif-preview">{{ notif.post.content|truncatechars:80 }}</div>
+          {% elif notif.comment %}
+            <div class="notif-preview">{{ notif.comment.content|truncatechars:80 }}</div>
+          {% endif %}
+
+          <div class="notif-time">{{ notif.created_at|naturaltime }}</div>
+        </div>
+
+      </a>
+    {% endfor %}
+  </div>
+
+  <!-- Pagination -->
+  {% if notifications.has_other_pages %}
+    <div class="pagination">
+      {% if notifications.has_previous %}
+        <a href="?page={{ notifications.previous_page_number }}">&larr;</a>
+      {% else %}
+        <span class="disabled">&larr;</span>
+      {% endif %}
+      {% for num in notifications.paginator.page_range %}
+        {% if notifications.number == num %}
+          <span class="current">{{ num }}</span>
+        {% elif num > notifications.number|add:"-3" and num < notifications.number|add:"3" %}
+          <a href="?page={{ num }}">{{ num }}</a>
+        {% endif %}
+      {% endfor %}
+      {% if notifications.has_next %}
+        <a href="?page={{ notifications.next_page_number }}">&rarr;</a>
+      {% else %}
+        <span class="disabled">&rarr;</span>
+      {% endif %}
+    </div>
+  {% endif %}
+
+{% else %}
+  <div class="notif-empty">
+    <div class="notif-empty-icon">🔔</div>
+    <div class="notif-empty-title">No notifications yet</div>
+    <p class="notif-empty-text">
+      When someone likes, comments, follows, or mentions you, it'll show up here.
+    </p>
+  </div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/notifications.js' %}"></script>
+{% endblock %}
