@@ -8,12 +8,12 @@ from django.shortcuts import get_object_or_404
 from rest_framework_simplejwt.views import TokenObtainPairView
 from accounts.models import Profile, Follow
 from accounts.permissions import OnlyAnonymousUsers
-from rest_framework.pagination import PageNumberPagination
 from .serializers import (
     ProfileSerializer, UserSerializer, UserUpdateSerializer,
     PublicProfileSerializer, CustomTokenObtainPairSerializer
 )
 from core.throttles import AuthRateThrottle, FollowRateThrottle
+from core.pagination import StandardResultsSetPagination
 
 
 class UserRegisterView(APIView):
@@ -123,12 +123,6 @@ class FollowToggleView(APIView):
             return Response({"is_following": False}, status=status.HTTP_200_OK)
 
         return Response({"is_following": True}, status=status.HTTP_201_CREATED)
-
-
-class StandardResultsSetPagination(PageNumberPagination):
-    page_size = 10
-    page_size_query_param = 'page_size'
-    max_page_size = 1000
 
 
 class FollowersListView(generics.ListAPIView):

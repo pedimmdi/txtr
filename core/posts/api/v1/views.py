@@ -6,18 +6,12 @@ from rest_framework.permissions import (
     IsAuthenticatedOrReadOnly, AllowAny, IsAuthenticated
 )
 from django.shortcuts import get_object_or_404
-from rest_framework.pagination import PageNumberPagination
 from accounts.models import Profile, Follow
 from posts.models import Post, Like, Bookmark
 from posts.permissions import IsAuthorOrReadOnly
 from core.throttles import PostCreateRateThrottle, LikeRateThrottle
 from .serializers import PostSerializer
-
-
-class StandardResultsSetPagination(PageNumberPagination):
-    page_size = 100
-    page_size_query_param = 'page_size'
-    max_page_size = 1000
+from core.pagination import StandardResultsSetPagination
 
 
 def get_annotated_posts(user):
