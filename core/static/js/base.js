@@ -184,7 +184,7 @@ function attachBookmarkHandlers() {
     btn._bookmarkAttached = true;
 
     btn.addEventListener('click', async () => {
-      const postId      = btn.dataset.postId;
+      const postId       = btn.dataset.postId;
       const isBookmarked = btn.dataset.bookmarked === 'true';
 
       btn.dataset.bookmarked = !isBookmarked;
@@ -193,6 +193,35 @@ function attachBookmarkHandlers() {
       try {
         const res = await apiFetch(`/api/v1/posts/${postId}/bookmark/`, { method: 'POST' });
         if (!res.ok) throw new Error();
+
+        // On the bookmarks page, remove the card after unbookmark
+        const onBookmarksPage = window.location.pathname.startsWith('/bookmarks');
+        if (onBookmarksPage && isBookmarked) {
+          const card = btn.closest('.post-card');
+          if (card) {
+            card.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(-4px)';
+            setTimeout(() => {
+              card.remove();
+              const list = document.querySelector('.post-list');
+              if (list && !list.querySelector('.post-card')) {
+                list.innerHTML = `
+                  <div class="empty-state">
+                    <div class="empty-state-icon">🔖</div>
+                    <div class="empty-state-title">No bookmarks yet</div>
+                    <p class="empty-state-text">
+                      Save posts for later by tapping the bookmark icon on any post.
+                    </p>
+                    <a href="/feed/" class="btn btn-primary btn-sm" style="margin-top:8px;">
+                      Back to feed
+                    </a>
+                  </div>`;
+              }
+            }, 200);
+          }
+        }
+
         showFlash(
           isBookmarked ? 'Removed from bookmarks' : 'Saved to bookmarks',
           'info'

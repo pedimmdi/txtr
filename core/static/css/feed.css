@@ -280,6 +280,7 @@
 .action-btn[data-action="like"]:hover        { color: var(--like); background: var(--like-dim); }
 .action-btn[data-action="like"].liked        { color: var(--like); }
 .action-btn[data-action="like"].liked svg    { fill: var(--like); stroke: var(--like); }
+.action-btn[data-action="like"]:not(.liked) svg { fill: none; stroke: currentColor; }
 
 /* Repost */
 .action-btn[data-action="repost"]:hover      { color: var(--success); background: var(--success-dim); }
@@ -288,7 +289,8 @@
 /* Bookmark */
 .action-btn[data-action="bookmark"]:hover    { color: var(--accent); background: var(--accent-dim); }
 .action-btn[data-action="bookmark"].bookmarked { color: var(--accent); }
-.action-btn[data-action="bookmark"].bookmarked svg { fill: var(--accent); }
+.action-btn[data-action="bookmark"].bookmarked svg { fill: var(--accent); stroke: var(--accent); }
+.action-btn[data-action="bookmark"]:not(.bookmarked) svg { fill: none; stroke: currentColor; }
 
 /* Comment */
 .action-btn.comment-btn:hover { color: var(--accent); background: var(--accent-dim); }
