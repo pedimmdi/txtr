@@ -59,10 +59,10 @@ db.sqlite3-journal
 staticfiles/
 
 # User-uploaded media (profile pictures, etc.)
-# Keep the directory structure with .gitkeep, ignore actual files
-media/**
-!media/**/
-!media/**/.gitkeep
+# Path is core/media/ because Django project lives under core/
+core/media/**
+!core/media/**/
+!core/media/**/.gitkeep
 
 # Environments
 .env
