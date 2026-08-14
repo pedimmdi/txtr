@@ -86,14 +86,26 @@ class CustomUserLoginView(TokenObtainPairView):
 
 class UserLogoutView(APIView):
     """
-    View to log out a user.
+    Blacklist the refresh token to log the user out of the API.
     """
     permission_classes = [IsAuthenticated]
+
     def post(self, request):
-        refresh_token = request.data.get('refresh_token')
-        token = RefreshToken(refresh_token)
-        token.blacklist()
-        return Response(status=205)
+        refresh_token = request.data.get('refresh') or request.data.get('refresh_token')
+        if not refresh_token:
+            return Response(
+                {'detail': 'Refresh token is required.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        try:
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+        except Exception:
+            return Response(
+                {'detail': 'Invalid or expired refresh token.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        return Response(status=status.HTTP_205_RESET_CONTENT)
 
 
 class FollowToggleView(APIView):

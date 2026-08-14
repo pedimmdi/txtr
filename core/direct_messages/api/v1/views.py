@@ -5,7 +5,6 @@ from rest_framework.views import APIView
 from django.shortcuts import get_object_or_404
 from accounts.models import Profile
 from direct_messages.models import Conversation, Message
-from direct_messages.permissions import IsSender
 from .serializers import ConversationSerializer, MessageSerializer
 from core.pagination import StandardResultsSetPagination
 
@@ -108,10 +107,6 @@ class MessageDeleteView(APIView):
         profile = get_object_or_404(Profile, username=username)
         other_user = profile.user
 
-        conversation = get_object_or_404(
-            Conversation,
-            participants=request.user
-        )
         conversation = Conversation.objects.filter(
             participants=request.user
         ).filter(

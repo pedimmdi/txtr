@@ -76,21 +76,21 @@
           <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
           <line x1="3" y1="10" x2="21" y2="10"/>
         </svg>
-        Joined {{ profile.user.date_joined|date:"F Y" }}
+        Joined {{ profile.user.created_date|date:"F Y" }}
       </span>
     </div>
   </div>
 
   <!-- Stats -->
   <div class="profile-stats">
-    <a href="{% url 'following' profile.username %}" class="profile-stat">
+    <span class="profile-stat">
       <span class="profile-stat-count">{{ following_count }}</span>
       <span class="profile-stat-label">Following</span>
-    </a>
-    <a href="{% url 'followers' profile.username %}" class="profile-stat">
+    </span>
+    <span class="profile-stat">
       <span class="profile-stat-count">{{ followers_count }}</span>
       <span class="profile-stat-label">Follower{{ followers_count|pluralize }}</span>
-    </a>
+    </span>
     <span class="profile-stat">
       <span class="profile-stat-count">{{ posts_count }}</span>
       <span class="profile-stat-label">Post{{ posts_count|pluralize }}</span>
