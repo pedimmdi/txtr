@@ -6,18 +6,12 @@ from rest_framework.permissions import (
     IsAuthenticatedOrReadOnly, IsAuthenticated
 )
 from django.shortcuts import get_object_or_404
-from rest_framework.pagination import PageNumberPagination
 from posts.models import Post
 from comments.models import Comment, CommentLike
 from comments.permissions import IsAuthorOrReadOnly
 from .serializers import CommentSerializer
 from core.throttles import CommentCreateRateThrottle, LikeRateThrottle
-
-
-class StandardResultsSetPagination(PageNumberPagination):
-    page_size = 100
-    page_size_query_param = 'page_size'
-    max_page_size = 1000
+from core.pagination import StandardResultsSetPagination
 
 
 def get_annotated_comments(user):

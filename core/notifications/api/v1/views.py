@@ -2,16 +2,10 @@ from rest_framework import generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.pagination import PageNumberPagination
 from django.shortcuts import get_object_or_404
 from notifications.models import Notification
 from .serializers import NotificationSerializer
-
-
-class StandardResultsSetPagination(PageNumberPagination):
-    page_size = 100
-    page_size_query_param = 'page_size'
-    max_page_size = 1000
+from core.pagination import StandardResultsSetPagination
 
 
 class NotificationListView(generics.ListAPIView):
