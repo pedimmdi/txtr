@@ -119,15 +119,22 @@
 
 <!-- Trending Hashtags -->
 {% if trending_hashtags %}
-<div class="widget">
+<div class="widget" id="trending-widget">
   <div class="widget-title">Trending</div>
-  {% for tag in trending_hashtags %}
-    <a href="{% url 'hashtag-posts' tag.name %}" class="trending-item">
-      <span class="trending-label">Hashtag</span>
-      <span class="trending-tag">#{{ tag.name }}</span>
-      <span class="trending-count">{{ tag.posts_count }} post{{ tag.posts_count|pluralize }}</span>
-    </a>
-  {% endfor %}
+  <div id="trending-list">
+    {% for tag in trending_hashtags %}
+      <a href="{% url 'hashtag-posts' tag.name %}" class="trending-item">
+        <span class="trending-label">Hashtag</span>
+        <span class="trending-tag">#{{ tag.name }}</span>
+        <span class="trending-count">{{ tag.posts_count }} post{{ tag.posts_count|pluralize }}</span>
+      </a>
+    {% endfor %}
+  </div>
+</div>
+{% else %}
+<div class="widget" id="trending-widget" style="display:none;">
+  <div class="widget-title">Trending</div>
+  <div id="trending-list"></div>
 </div>
 {% endif %}
 

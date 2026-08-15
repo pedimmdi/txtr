@@ -25,7 +25,7 @@ def feed_view(request):
 
     trending_hashtags = Hashtag.objects.annotate(
         posts_count=Count('posts')
-    ).order_by('-posts_count')[:5]
+    ).order_by('-posts_count')[:3]
 
     suggested_users = (
         Profile.objects

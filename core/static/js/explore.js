@@ -13,7 +13,7 @@ window.handleFollow = async function(btn) {
 
   try {
     const res = await window.txtr.apiFetch(
-      `/api/v1/accounts/follow/${username}/`,
+      `/api/v1/accounts/users/${username}/follow/`,
       { method: 'POST' }
     );
     if (!res.ok) throw new Error();

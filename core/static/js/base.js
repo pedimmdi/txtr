@@ -127,11 +127,36 @@ async function fetchNotificationCount() {
   }
 }
 
+async function fetchMessageCount() {
+  try {
+    const res = await apiFetch('/api/v1/dm/');
+    if (!res.ok) return;
+    const data = await res.json();
+    const list = data.results || data;
+    if (!Array.isArray(list)) return;
+
+    const count = list.reduce((sum, c) => sum + (c.unread_count || 0), 0);
+
+    document.querySelectorAll('.msg-badge').forEach(badge => {
+      if (count > 0) {
+        badge.textContent = count > 99 ? '99+' : count;
+        badge.style.display = 'flex';
+      } else {
+        badge.style.display = 'none';
+      }
+    });
+  } catch {
+    // silent
+  }
+}
+
 // Poll every 60 seconds if user is logged in
 document.addEventListener('DOMContentLoaded', () => {
   if (document.body.dataset.authenticated === 'true') {
     fetchNotificationCount();
+    fetchMessageCount();
     setInterval(fetchNotificationCount, 60000);
+    setInterval(fetchMessageCount, 30000);
   }
 });
 

@@ -16,22 +16,128 @@ const newDmCancel = document.getElementById('new-dm-cancel');
 const newDmGo     = document.getElementById('new-dm-go');
 const dmInput     = document.getElementById('dm-username-input');
 const dmError     = document.getElementById('dm-username-error');
+const suggestionsEl = document.getElementById('dm-user-suggestions');
 
-function openNewDm()  { if (newDmModal) { newDmModal.style.display = 'flex'; dmInput?.focus(); } }
-function closeNewDm() { if (newDmModal) { newDmModal.style.display = 'none'; } }
+let selectedUsername = null;
+let searchTimer = null;
+
+function openNewDm() {
+  if (newDmModal) {
+    newDmModal.style.display = 'flex';
+    selectedUsername = null;
+    if (dmInput) {
+      dmInput.value = '';
+      dmInput.focus();
+    }
+    hideSuggestions();
+    if (dmError) dmError.style.display = 'none';
+  }
+}
+
+function closeNewDm() {
+  if (newDmModal) {
+    newDmModal.style.display = 'none';
+    hideSuggestions();
+  }
+}
+
+function hideSuggestions() {
+  if (!suggestionsEl) return;
+  suggestionsEl.style.display = 'none';
+  suggestionsEl.innerHTML = '';
+}
+
+function pickUser(username) {
+  selectedUsername = username;
+  if (dmInput) dmInput.value = username;
+  hideSuggestions();
+  if (dmError) dmError.style.display = 'none';
+}
+
+async function searchUsers(query) {
+  if (!suggestionsEl) return;
+
+  if (!query || query.length < 1) {
+    hideSuggestions();
+    return;
+  }
+
+  try {
+    const res = await window.txtr.apiFetch(
+      `/api/v1/accounts/users/?search=${encodeURIComponent(query)}&page_size=8`
+    );
+    if (!res.ok) return;
+
+    const data = await res.json();
+    const users = data.results || data;
+
+    if (!Array.isArray(users) || users.length === 0) {
+      suggestionsEl.style.display = 'block';
+      suggestionsEl.innerHTML =
+        '<div class="dm-suggestion-item" style="cursor:default;color:var(--text-muted);">No users found</div>';
+      return;
+    }
+
+    suggestionsEl.style.display = 'block';
+    suggestionsEl.innerHTML = users.map(u => {
+      const name = u.username;
+      const initial = (name || '?')[0].toUpperCase();
+      const avatar = u.image
+        ? `<img src="${u.image}" class="avatar avatar-sm" alt="" />`
+        : `<div class="avatar-placeholder avatar-sm">${initial}</div>`;
+      return `
+        <div class="dm-suggestion-item" data-username="${name}">
+          ${avatar}
+          <div>
+            <div class="dm-suggestion-name">${name}</div>
+            <div class="dm-suggestion-handle">@${name}</div>
+          </div>
+        </div>`;
+    }).join('');
+
+    suggestionsEl.querySelectorAll('.dm-suggestion-item[data-username]').forEach(item => {
+      item.addEventListener('click', () => {
+        pickUser(item.dataset.username);
+      });
+    });
+  } catch {
+    // silent — search is best-effort
+  }
+}
 
 if (newDmBtn)    newDmBtn.addEventListener('click', openNewDm);
 if (newDmClose)  newDmClose.addEventListener('click', closeNewDm);
 if (newDmCancel) newDmCancel.addEventListener('click', closeNewDm);
-if (newDmModal)  newDmModal.addEventListener('click', e => { if (e.target === newDmModal) closeNewDm(); });
+if (newDmModal) {
+  newDmModal.addEventListener('click', e => {
+    if (e.target === newDmModal) closeNewDm();
+  });
+}
 
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && newDmModal?.style.display !== 'none') closeNewDm();
 });
 
+if (dmInput) {
+  dmInput.addEventListener('input', () => {
+    selectedUsername = null;
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+      searchUsers(dmInput.value.trim());
+    }, 250);
+  });
+
+  dmInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      newDmGo?.click();
+    }
+  });
+}
+
 if (newDmGo) {
   newDmGo.addEventListener('click', async () => {
-    const username = dmInput?.value.trim();
+    const username = (selectedUsername || dmInput?.value || '').trim();
     if (!username) return;
 
     newDmGo.disabled = true;
@@ -39,34 +145,23 @@ if (newDmGo) {
     if (dmError) dmError.style.display = 'none';
 
     try {
-      const res = await window.txtr.apiFetch('/api/v1/dm/', {
-        method: 'POST',
-        body: JSON.stringify({ username }),
-      });
+      const res = await window.txtr.apiFetch(
+        `/api/v1/accounts/users/${encodeURIComponent(username)}/`
+      );
 
-      if (res.status === 404 || res.status === 400) {
+      if (res.status === 404) {
         if (dmError) dmError.style.display = 'flex';
         return;
       }
-
       if (!res.ok) throw new Error();
 
-      // Navigate to the conversation
-      window.location.href = `/messages/${username}/`;
-
+      window.location.href = `/messages/${encodeURIComponent(username)}/`;
     } catch {
       window.txtr.showFlash('Could not open conversation.', 'error');
     } finally {
       newDmGo.disabled = false;
       newDmGo.textContent = 'Open chat';
     }
-  });
-}
-
-// Enter key in username input
-if (dmInput) {
-  dmInput.addEventListener('keydown', e => {
-    if (e.key === 'Enter') newDmGo?.click();
   });
 }
 
@@ -80,10 +175,9 @@ const msgSendBtn   = document.getElementById('msg-send-btn');
 const OTHER_USER   = window.OTHER_USERNAME;
 const ME           = window.MY_USERNAME;
 
-// Only run conversation logic if we're on the conversation page
-if (msgInput) {
+let lastMsgId = 0;
 
-  /* ── Auto-grow textarea ───────────────────────────────── */
+if (msgInput) {
   msgInput.addEventListener('input', () => {
     msgInput.style.height = 'auto';
     msgInput.style.height = msgInput.scrollHeight + 'px';
@@ -99,12 +193,9 @@ if (msgInput) {
 
   msgSendBtn.addEventListener('click', sendMessage);
 
-  /* ── Scroll to bottom on load ─────────────────────────── */
   scrollToBottom(false);
-
-  /* ── Poll for new messages every 15s ─────────────────── */
-  let lastMsgId = getLastMessageId();
-  setInterval(() => pollMessages(lastMsgId), 15000);
+  lastMsgId = getLastMessageId();
+  setInterval(() => pollMessages(), 15000);
 }
 
 /* ── Send message ────────────────────────────────────────── */
@@ -115,9 +206,11 @@ async function sendMessage() {
   msgSendBtn.disabled = true;
   const savedValue = content;
 
-  // Optimistic: append immediately
   const tempId  = `temp-${Date.now()}`;
-  const tempMsg = buildBubble({ id: tempId, content, sender_username: ME, created_at: new Date().toISOString() }, true);
+  const tempMsg = buildBubble(
+    { id: tempId, content, sender_username: ME, created_at: new Date().toISOString() },
+    true
+  );
   messagesArea.insertAdjacentHTML('beforeend', tempMsg);
   msgInput.value = '';
   msgInput.style.height = 'auto';
@@ -132,12 +225,14 @@ async function sendMessage() {
     if (!res.ok) throw new Error();
     const msg = await res.json();
 
-    // Replace temp bubble with real one (has correct id for deletion)
     const tempEl = document.getElementById(tempId);
     if (tempEl) tempEl.outerHTML = buildBubble(msg, true);
 
+    const realId = parseInt(msg.id, 10);
+    if (!Number.isNaN(realId) && realId > lastMsgId) {
+      lastMsgId = realId;
+    }
   } catch {
-    // Remove temp bubble on failure
     document.getElementById(tempId)?.remove();
     msgInput.value = savedValue;
     msgInput.style.height = 'auto';
@@ -148,11 +243,14 @@ async function sendMessage() {
 }
 
 /* ── Delete message ──────────────────────────────────────── */
-window.deleteMessage = async function(msgId, username) {
+window.deleteMessage = async function (msgId, username) {
   if (!confirm('Delete this message?')) return;
 
   try {
-    const res = await window.txtr.apiFetch(`/api/v1/dm/${username}/${msgId}/`, { method: 'DELETE' });
+    const res = await window.txtr.apiFetch(
+      `/api/v1/dm/${username}/${msgId}/`,
+      { method: 'DELETE' }
+    );
     if (!res.ok) throw new Error();
     document.getElementById(`msg-${msgId}`)?.remove();
   } catch {
@@ -161,23 +259,49 @@ window.deleteMessage = async function(msgId, username) {
 };
 
 /* ── Poll for new messages ───────────────────────────────── */
-async function pollMessages(afterId) {
+async function pollMessages() {
   try {
-    const res  = await fetch(`/api/v1/dm/${OTHER_USER}/`);
+    const res = await window.txtr.apiFetch(`/api/v1/dm/${OTHER_USER}/`);
+    if (!res.ok) return;
+
     const data = await res.json();
-    const msgs = (data.results || data).filter(m => m.id > afterId);
+    const all  = data.results || data;
+    if (!Array.isArray(all)) return;
 
-    if (msgs.length === 0) return;
+    all.forEach(msg => {
+      const el = document.getElementById(`msg-${msg.id}`);
+      if (el) {
+        // Update read ticks on own messages
+        if (msg.sender_username === ME) {
+          const tick = el.querySelector('.msg-ticks');
+          if (tick) {
+            if (msg.is_read) {
+              tick.classList.add('read');
+              tick.textContent = '✓✓';
+              tick.title = 'Read';
+            } else {
+              tick.classList.remove('read');
+              tick.textContent = '✓';
+              tick.title = 'Sent';
+            }
+          }
+        }
+        return;
+      }
 
-    msgs.forEach(msg => {
-      if (document.getElementById(`msg-${msg.id}`)) return;
+      if (Number(msg.id) <= lastMsgId) return;
       const isMe = msg.sender_username === ME;
       messagesArea.insertAdjacentHTML('beforeend', buildBubble(msg, isMe));
     });
 
-    scrollToBottom();
-    lastMsgId = msgs[msgs.length - 1].id;
-
+    const ids = all.map(m => Number(m.id)).filter(n => !Number.isNaN(n));
+    if (ids.length) {
+      const maxId = Math.max(...ids);
+      if (maxId > lastMsgId) {
+        lastMsgId = maxId;
+        scrollToBottom();
+      }
+    }
   } catch {
     // Silently fail — polling is best-effort
   }
@@ -188,10 +312,11 @@ function buildBubble(msg, isMe) {
   const avatarHtml = !isMe
     ? (window.OTHER_AVATAR
         ? `<img src="${window.OTHER_AVATAR}" alt="${OTHER_USER}" class="avatar avatar-sm" />`
-        : `<div class="avatar-placeholder avatar-sm">${OTHER_USER[0].toUpperCase()}</div>`)
+        : `<div class="avatar-placeholder avatar-sm">${(OTHER_USER || '?')[0].toUpperCase()}</div>`)
     : '';
 
-  const deleteBtn = isMe
+  const canDelete = isMe && String(msg.id).indexOf('temp-') !== 0;
+  const deleteBtn = canDelete
     ? `<button class="msg-delete" onclick="deleteMessage(${msg.id}, '${OTHER_USER}')" title="Delete">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
           <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
@@ -199,7 +324,16 @@ function buildBubble(msg, isMe) {
        </button>`
     : '';
 
-  const time = new Date(msg.created_at).toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit', hour12: false });
+  const time = new Date(msg.created_at).toLocaleTimeString('en', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+
+  const isRead = !!msg.is_read;
+  const ticks = isMe
+    ? `<span class="msg-ticks ${isRead ? 'read' : ''}" title="${isRead ? 'Read' : 'Sent'}">${isRead ? '✓✓' : '✓'}</span>`
+    : '';
 
   return `
     <div class="msg-row ${isMe ? 'me' : ''}" id="msg-${msg.id}">
@@ -209,7 +343,10 @@ function buildBubble(msg, isMe) {
           ${escHtml(msg.content)}
           ${deleteBtn}
         </div>
-        <div class="msg-time">${time}</div>
+        <div class="msg-meta">
+          <span class="msg-time">${time}</span>
+          ${ticks}
+        </div>
       </div>
     </div>`;
 }
@@ -219,7 +356,7 @@ function scrollToBottom(smooth = true) {
   if (!messagesArea) return;
   messagesArea.scrollTo({
     top: messagesArea.scrollHeight,
-    behavior: smooth ? 'smooth' : 'auto'
+    behavior: smooth ? 'smooth' : 'auto',
   });
 }
 
@@ -227,12 +364,16 @@ function scrollToBottom(smooth = true) {
 function getLastMessageId() {
   const rows = messagesArea?.querySelectorAll('[id^="msg-"]') || [];
   if (rows.length === 0) return 0;
-  const ids = [...rows].map(el => parseInt(el.id.replace('msg-', '') || 0)).filter(Boolean);
+  const ids = [...rows]
+    .map(el => parseInt(el.id.replace('msg-', ''), 10))
+    .filter(n => !Number.isNaN(n));
   return ids.length ? Math.max(...ids) : 0;
 }
 
 function escHtml(str) {
   return String(str)
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }

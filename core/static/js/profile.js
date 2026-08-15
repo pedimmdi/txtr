@@ -22,7 +22,25 @@ document.querySelectorAll('.profile-tab').forEach(tab => {
 /* ── Follow Toggle ───────────────────────────────────────── */
 const followBtn = document.getElementById('follow-btn');
 
+function setFollowButtonState(btn, isFollowing, followsYou) {
+  btn.dataset.following = isFollowing ? 'true' : 'false';
+  btn.classList.remove('btn-primary', 'btn-outline', 'btn-danger');
+
+  if (isFollowing) {
+    btn.textContent = 'Following';
+    btn.classList.add('btn-outline');
+  } else if (followsYou) {
+    btn.textContent = 'Follow back';
+    btn.classList.add('btn-primary');
+  } else {
+    btn.textContent = 'Follow';
+    btn.classList.add('btn-primary');
+  }
+}
+
 if (followBtn) {
+  const followsYou = followBtn.dataset.followsYou === 'true';
+
   followBtn.addEventListener('click', async () => {
     const username    = followBtn.dataset.username;
     const isFollowing = followBtn.dataset.following === 'true';
@@ -31,35 +49,53 @@ if (followBtn) {
 
     try {
       const res = await window.txtr.apiFetch(
-        `/api/v1/accounts/follow/${username}/`,
+        `/api/v1/accounts/users/${encodeURIComponent(username)}/follow/`,
         { method: 'POST' }
       );
       if (!res.ok) throw new Error();
       const data = await res.json();
-
       const nowFollowing = data.is_following;
-      followBtn.dataset.following = nowFollowing;
-      followBtn.textContent = nowFollowing ? 'Following' : 'Follow';
-      followBtn.classList.toggle('btn-primary', !nowFollowing);
-      followBtn.classList.toggle('btn-outline',  nowFollowing);
 
-      // Update followers count in stats
+      setFollowButtonState(followBtn, nowFollowing, followsYou);
+
       const statEls = document.querySelectorAll('.profile-stat-count');
-      // statEls[0] = following, [1] = followers
+      // [0]=following, [1]=followers
       if (statEls[1]) {
-        const current = parseInt(statEls[1].textContent || 0);
-        statEls[1].textContent = nowFollowing ? current + 1 : Math.max(0, current - 1);
+        const current = parseInt(statEls[1].textContent || 0, 10);
+        statEls[1].textContent = nowFollowing
+          ? current + 1
+          : Math.max(0, current - 1);
       }
 
       window.txtr.showFlash(
         nowFollowing ? `Following ${username}` : `Unfollowed ${username}`,
         'info'
       );
-
     } catch {
       window.txtr.showFlash('Could not update follow status.', 'error');
     } finally {
       followBtn.disabled = false;
+    }
+  });
+
+  // Hover: Following → Unfollow
+  followBtn.addEventListener('mouseenter', () => {
+    if (followBtn.dataset.following === 'true') {
+      followBtn.textContent = 'Unfollow';
+      followBtn.classList.add('btn-danger');
+      followBtn.classList.remove('btn-outline');
+    }
+  });
+
+  followBtn.addEventListener('mouseleave', () => {
+    if (followBtn.dataset.following === 'true') {
+      followBtn.textContent = 'Following';
+      followBtn.classList.remove('btn-danger');
+      followBtn.classList.add('btn-outline');
+    } else if (followsYou) {
+      followBtn.textContent = 'Follow back';
+    } else {
+      followBtn.textContent = 'Follow';
     }
   });
 }

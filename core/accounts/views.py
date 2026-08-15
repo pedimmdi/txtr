@@ -74,6 +74,13 @@ def profile_view(request, username):
         Follow.objects.filter(follower=request.user, following=profile.user).exists()
     )
 
+    follows_you = False
+    if request.user.is_authenticated and not is_own_profile:
+        follows_you = Follow.objects.filter(
+            follower=profile.user,
+            following=request.user
+        ).exists()
+
     # Posts tab — excludes reposts
     posts_qs    = get_annotated_posts(request.user).filter(
         author=profile.user, original_post=None
@@ -95,13 +102,14 @@ def profile_view(request, username):
     following_count = Follow.objects.filter(follower=profile.user).count()
 
     return render(request, 'accounts/profile.html', {
-        'profile':         profile,
-        'is_own_profile':  is_own_profile,
-        'is_following':    is_following,
-        'posts':           posts,
-        'posts_count':     posts_count,
-        'reposts':         reposts,
-        'liked_posts':     liked_posts,
+        'profile': profile,
+        'is_own_profile': is_own_profile,
+        'is_following': is_following,
+        'follows_you': follows_you,
+        'posts': posts,
+        'posts_count': posts_count,
+        'reposts': reposts,
+        'liked_posts': liked_posts,
         'followers_count': followers_count,
         'following_count': following_count,
     })

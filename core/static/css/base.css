@@ -107,7 +107,8 @@ ul, ol { list-style: none; }
   position: sticky;
   top: 0;
   height: 100vh;
-  overflow-y: auto;
+  overflow-y: hidden;
+  /* overflow-y: auto; */
 }
 
 /* ── Brand / Logo ───────────────────────────────────────── */

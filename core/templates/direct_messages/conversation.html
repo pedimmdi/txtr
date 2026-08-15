@@ -68,22 +68,47 @@
 
           <div>
             <div class="msg-bubble">
-              {{ message.content }}
-              {% if message.sender == request.user %}
-                <button
-                  class="msg-delete"
-                  onclick="deleteMessage({{ message.id }}, '{{ other_user.username }}')"
-                  title="Delete"
-                >
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
-                       stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-                    <line x1="18" y1="6" x2="6" y2="18"/>
-                    <line x1="6" y1="6" x2="18" y2="18"/>
-                  </svg>
-                </button>
-              {% endif %}
+                {{ message.content }}
+                {% if message.sender == request.user %}
+                  <button
+                    class="msg-delete"
+                    onclick="deleteMessage({{ message.id }}, '{{ other_user.username }}')"
+                    title="Delete"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                      <line x1="18" y1="6" x2="6" y2="18"/>
+                      <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                  </button>
+                {% endif %}
+              </div>
+                        <div>
+              <div class="msg-bubble">
+                {{ message.content }}
+                {% if message.sender == request.user %}
+                  <button
+                    class="msg-delete"
+                    onclick="deleteMessage({{ message.id }}, '{{ other_user.username }}')"
+                    title="Delete"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                      <line x1="18" y1="6" x2="6" y2="18"/>
+                      <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                  </button>
+                {% endif %}
+              </div>
+              <div class="msg-meta">
+                <span class="msg-time">{{ message.created_at|time:"H:i" }}</span>
+                {% if message.sender == request.user %}
+                  <span class="msg-ticks {% if message.is_read %}read{% endif %}" title="{% if message.is_read %}Read{% else %}Sent{% endif %}">
+                    {% if message.is_read %}✓✓{% else %}✓{% endif %}
+                  </span>
+                {% endif %}
+              </div>
             </div>
-            <div class="msg-time">{{ message.created_at|time:"H:i" }}</div>
           </div>
 
         </div>
@@ -129,8 +154,8 @@
 <script>
   window.OTHER_USERNAME = "{{ other_user.username }}";
   window.MY_USERNAME    = "{{ request.user.profile.username }}";
-  window.MY_AVATAR      = "{{ request.user.profile.image.url|default:'' }}";
-  window.OTHER_AVATAR   = "{{ other_user.image.url|default:'' }}";
+  window.MY_AVATAR      = "{% if request.user.profile.image %}{{ request.user.profile.image.url }}{% endif %}";
+  window.OTHER_AVATAR   = "{% if other_user.image %}{{ other_user.image.url }}{% endif %}";
 </script>
 <script src="{% static 'js/dm.js' %}"></script>
 {% endblock %}

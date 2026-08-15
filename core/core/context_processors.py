@@ -1,19 +1,24 @@
-# core/core/context_processors.py
-# Injects global variables into every template context.
-
-
 def notifications_count(request):
-    """
-    Adds unread_notifications_count to every template.
-    The actual live count is also updated via JS polling (base.js),
-    this is just for the initial server-rendered value.
-    """
     if not request.user.is_authenticated:
-        return {'unread_notifications_count': 0}
+        return {
+            'unread_notifications_count': 0,
+            'unread_messages_count': 0,
+        }
 
     from notifications.models import Notification
-    count = Notification.objects.filter(
+    from direct_messages.models import Message
+
+    notif_count = Notification.objects.filter(
         recipient=request.user,
         is_read=False
     ).count()
-    return {'unread_notifications_count': count}
+
+    msg_count = Message.objects.filter(
+        conversation__participants=request.user,
+        is_read=False
+    ).exclude(sender=request.user).count()
+
+    return {
+        'unread_notifications_count': notif_count,
+        'unread_messages_count': msg_count,
+    }

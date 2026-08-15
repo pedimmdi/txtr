@@ -43,17 +43,21 @@
     </div>
 
     <!-- Actions -->
-    <div class="profile-actions">
+        <div class="profile-actions">
       {% if is_own_profile %}
         <button class="btn btn-outline" id="edit-profile-btn">Edit profile</button>
       {% else %}
+        <a href="{% url 'conversation' profile.username %}" class="btn btn-outline">
+          Message
+        </a>
         <button
           class="btn {% if is_following %}btn-outline{% else %}btn-primary{% endif %}"
           id="follow-btn"
           data-username="{{ profile.username }}"
           data-following="{{ is_following|lower }}"
+          data-follows-you="{{ follows_you|lower }}"
         >
-          {% if is_following %}Following{% else %}Follow{% endif %}
+          {% if is_following %}Following{% elif follows_you %}Follow back{% else %}Follow{% endif %}
         </button>
       {% endif %}
     </div>

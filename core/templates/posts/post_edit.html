@@ -51,7 +51,7 @@
         <div class="compose-footer">
           <div class="compose-tools"></div>
           <div class="compose-right">
-            <span class="char-counter" id="edit-char-counter">{{ 1000|add:post.content|length|default:0 }}</span>
+            <span class="char-counter" id="edit-char-counter">1000</span>
             <a href="{% url 'post-detail' post.pk %}" class="btn btn-ghost btn-sm">Cancel</a>
             <button type="submit" class="compose-submit" id="edit-post-submit">Save</button>
           </div>
@@ -65,26 +65,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
-(function () {
-  const MAX = 1000;
-  const textarea = document.getElementById('edit-post-textarea');
-  const counter  = document.getElementById('edit-char-counter');
-  const submit   = document.getElementById('edit-post-submit');
-  if (!textarea || !counter || !submit) return;
-
-  function update() {
-    const remaining = MAX - textarea.value.length;
-    counter.textContent = remaining;
-    counter.classList.toggle('warn', remaining <= 150 && remaining > 50);
-    counter.classList.toggle('danger', remaining <= 50);
-    submit.disabled = textarea.value.trim().length === 0 || remaining < 0;
-    textarea.style.height = 'auto';
-    textarea.style.height = textarea.scrollHeight + 'px';
-  }
-
-  textarea.addEventListener('input', update);
-  update();
-})();
-</script>
+<script src="{% static 'js/post_edit.js' %}"></script>
 {% endblock %}

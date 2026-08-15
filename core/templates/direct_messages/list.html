@@ -91,14 +91,8 @@
     <div class="modal-body">
       <div class="form-group" style="margin-bottom:0;">
         <label class="form-label" for="dm-username-input">Send to</label>
-        <input
-          class="form-input"
-          type="text"
-          id="dm-username-input"
-          placeholder="Enter a username"
-          autocomplete="off"
-          autofocus
-        />
+        <input class="form-input" type="text" id="dm-username-input" placeholder="Search username" autocomplete="off" />
+        <div id="dm-user-suggestions" class="dm-suggestions" style="display:none;"></div>
         <span class="form-error" id="dm-username-error" style="display:none;margin-top:6px;">
           User not found.
         </span>

@@ -231,7 +231,10 @@ document.querySelectorAll('.follow-btn').forEach(btn => {
     const username = btn.dataset.username;
 
     try {
-      const res = await window.txtr.apiFetch(`/api/v1/accounts/follow/${username}/`, { method: 'POST' });
+      const res = await window.txtr.apiFetch(
+        `/api/v1/accounts/users/${username}/follow/`,
+        { method: 'POST' }
+      );
       if (!res.ok) throw new Error();
       const data = await res.json();
 
@@ -244,4 +247,42 @@ document.querySelectorAll('.follow-btn').forEach(btn => {
       window.txtr.showFlash('Could not update follow status.', 'error');
     }
   });
+});
+
+/* ── Trending hashtags (refresh without full page reload) ── */
+async function refreshTrending() {
+  const list = document.getElementById('trending-list');
+  const widget = document.getElementById('trending-widget');
+  if (!list || !widget) return;
+
+  try {
+    const res = await window.txtr.apiFetch('/api/v1/hashtags/?page_size=3');
+    if (!res.ok) return;
+    const data = await res.json();
+    const tags = data.results || data;
+
+    if (!Array.isArray(tags) || tags.length === 0) {
+      widget.style.display = 'none';
+      return;
+    }
+
+    widget.style.display = '';
+    list.innerHTML = tags.slice(0, 3).map(tag => {
+      const name = tag.name;
+      const count = tag.posts_count != null ? tag.posts_count : 0;
+      const label = count === 1 ? 'post' : 'posts';
+      return `
+        <a href="/hashtags/${name}/posts/" class="trending-item">
+          <span class="trending-label">Hashtag</span>
+          <span class="trending-tag">#${name}</span>
+          <span class="trending-count">${count} ${label}</span>
+        </a>`;
+    }).join('');
+  } catch {
+    // silent — not critical
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  setInterval(refreshTrending, 60000);
 });
