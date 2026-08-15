@@ -180,10 +180,10 @@
 <!-- ── Edit Profile Modal ────────────────────────────────── -->
 {% if is_own_profile %}
 <div class="modal-overlay" id="edit-modal" style="display:none;">
-  <div class="modal">
+  <div class="modal" role="dialog" aria-labelledby="edit-modal-title" aria-modal="true">
     <div class="modal-header">
-      <span class="modal-title">Edit profile</span>
-      <button class="modal-close" id="edit-modal-close">
+      <span class="modal-title" id="edit-modal-title">Edit profile</span>
+      <button type="button" class="modal-close" id="edit-modal-close" aria-label="Close">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
              stroke-width="2.5" stroke-linecap="round">
           <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
@@ -195,7 +195,6 @@
       {% csrf_token %}
       <div class="modal-body">
 
-        <!-- Avatar upload -->
         <div class="avatar-upload">
           {% if profile.image %}
             <img src="{{ profile.image.url }}" alt="" class="avatar-upload-preview" id="avatar-preview" />
@@ -204,32 +203,25 @@
               {{ profile.username|first|upper }}
             </div>
           {% endif %}
-          <div>
-            <label class="avatar-upload-btn" for="avatar-file-input">
-              Change photo
-            </label>
+          <div class="avatar-upload-meta">
+            <label class="avatar-upload-btn" for="avatar-file-input">Change photo</label>
             <input type="file" id="avatar-file-input" name="image"
-                   accept="image/*" onchange="previewAvatar(this)" />
-            <div style="font-size:12px; color:var(--text-muted); margin-top:6px;">
-              JPG or PNG, max 2MB
-            </div>
+                   accept="image/jpeg,image/png,image/webp" onchange="previewAvatar(this)" />
+            <p class="avatar-upload-hint">JPG, PNG or WebP. Max 2MB.</p>
           </div>
         </div>
 
-        <!-- Username -->
         <div class="form-group">
           <label class="form-label" for="edit-username">Username</label>
           <input class="form-input" type="text" id="edit-username" name="username"
-                 value="{{ profile.username }}" maxlength="30" required />
+                 value="{{ profile.username }}" maxlength="30" autocomplete="username" required />
         </div>
 
-        <!-- Bio -->
-        <div class="form-group">
+        <div class="form-group" style="margin-bottom:0;">
           <label class="form-label" for="edit-bio">Bio</label>
           <textarea class="form-input" id="edit-bio" name="bio"
-                    rows="3" maxlength="200"
-                    placeholder="Tell people a little about yourself"
-                    style="resize:vertical;">{{ profile.bio|default:'' }}</textarea>
+                    rows="4" maxlength="200"
+                    placeholder="Tell people a little about yourself">{{ profile.bio|default:'' }}</textarea>
           <span class="form-hint">Max 200 characters.</span>
         </div>
 

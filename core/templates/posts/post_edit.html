@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Edit post — txtr{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/feed.css' %}" />
+{% endblock %}
+
+{% block content %}
+
+<header class="page-header">
+  <a href="{% url 'post-detail' post.pk %}" class="page-header-back" aria-label="Back">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+         stroke-width="2.5" stroke-linecap="round">
+      <line x1="19" y1="12" x2="5" y2="12"/>
+      <polyline points="12 19 5 12 12 5"/>
+    </svg>
+  </a>
+  <span class="page-title">Edit post</span>
+</header>
+
+<div class="compose">
+  <form method="POST" action="{% url 'post-edit' post.pk %}" id="edit-post-form">
+    {% csrf_token %}
+    <div class="compose-inner">
+
+      {% if request.user.profile.image %}
+        <img src="{{ request.user.profile.image.url }}"
+             alt="{{ request.user.profile.username }}"
+             class="avatar avatar-md" />
+      {% else %}
+        <div class="avatar-placeholder avatar-md">
+          {{ request.user.profile.username|first|upper }}
+        </div>
+      {% endif %}
+
+      <div class="compose-body">
+        <textarea
+          id="edit-post-textarea"
+          name="content"
+          class="compose-textarea"
+          maxlength="1000"
+          rows="4"
+          required
+          placeholder="What's on your mind?"
+        >{{ post.content }}</textarea>
+
+        <div class="compose-divider"></div>
+
+        <div class="compose-footer">
+          <div class="compose-tools"></div>
+          <div class="compose-right">
+            <span class="char-counter" id="edit-char-counter">{{ 1000|add:post.content|length|default:0 }}</span>
+            <a href="{% url 'post-detail' post.pk %}" class="btn btn-ghost btn-sm">Cancel</a>
+            <button type="submit" class="compose-submit" id="edit-post-submit">Save</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </form>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  const MAX = 1000;
+  const textarea = document.getElementById('edit-post-textarea');
+  const counter  = document.getElementById('edit-char-counter');
+  const submit   = document.getElementById('edit-post-submit');
+  if (!textarea || !counter || !submit) return;
+
+  function update() {
+    const remaining = MAX - textarea.value.length;
+    counter.textContent = remaining;
+    counter.classList.toggle('warn', remaining <= 150 && remaining > 50);
+    counter.classList.toggle('danger', remaining <= 50);
+    submit.disabled = textarea.value.trim().length === 0 || remaining < 0;
+    textarea.style.height = 'auto';
+    textarea.style.height = textarea.scrollHeight + 'px';
+  }
+
+  textarea.addEventListener('input', update);
+  update();
+})();
+</script>
+{% endblock %}
