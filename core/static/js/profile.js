@@ -160,20 +160,3 @@ window.previewAvatar = function(input) {
   };
   reader.readAsDataURL(file);
 };
-
-/* ── Hover effect on "Following" button → show "Unfollow" ── */
-if (followBtn && followBtn.dataset.following === 'true') {
-  followBtn.addEventListener('mouseenter', () => {
-    followBtn.textContent = 'Unfollow';
-    followBtn.classList.add('btn-danger');
-    followBtn.classList.remove('btn-outline');
-  });
-
-  followBtn.addEventListener('mouseleave', () => {
-    if (followBtn.dataset.following === 'true') {
-      followBtn.textContent = 'Following';
-      followBtn.classList.remove('btn-danger');
-      followBtn.classList.add('btn-outline');
-    }
-  });
-}

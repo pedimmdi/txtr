@@ -241,8 +241,8 @@ document.querySelectorAll('.follow-btn').forEach(btn => {
       const isFollowing = data.is_following;
       btn.dataset.following = isFollowing;
       btn.textContent = isFollowing ? 'Following' : 'Follow';
-      btn.classList.toggle('btn-primary', isFollowing);
-      btn.classList.toggle('btn-outline', !isFollowing);
+      btn.classList.toggle('btn-primary', !isFollowing);
+      btn.classList.toggle('btn-outline', isFollowing);
     } catch {
       window.txtr.showFlash('Could not update follow status.', 'error');
     }

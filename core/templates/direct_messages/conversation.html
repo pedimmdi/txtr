@@ -43,18 +43,15 @@
     {% if messages_list %}
       {% for message in messages_list %}
 
-        <!-- Date separator -->
         {% ifchanged message.created_at|date:"Y-m-d" %}
           <div class="msg-date-separator">
             {{ message.created_at|date:"M j, Y" }}
           </div>
         {% endifchanged %}
 
-        <!-- Message row -->
         <div class="msg-row {% if message.sender == request.user %}me{% endif %}"
              id="msg-{{ message.id }}">
 
-          <!-- Other user avatar (only for their messages) -->
           {% if message.sender != request.user %}
             {% if other_user.image %}
               <img src="{{ other_user.image.url }}" alt="{{ other_user.username }}"
@@ -66,48 +63,13 @@
             {% endif %}
           {% endif %}
 
-          <div>
-            <div class="msg-bubble">
-                {{ message.content }}
-                {% if message.sender == request.user %}
-                  <button
-                    class="msg-delete"
-                    onclick="deleteMessage({{ message.id }}, '{{ other_user.username }}')"
-                    title="Delete"
-                  >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-                      <line x1="18" y1="6" x2="6" y2="18"/>
-                      <line x1="6" y1="6" x2="18" y2="18"/>
-                    </svg>
-                  </button>
-                {% endif %}
-              </div>
-                        <div>
-              <div class="msg-bubble">
-                {{ message.content }}
-                {% if message.sender == request.user %}
-                  <button
-                    class="msg-delete"
-                    onclick="deleteMessage({{ message.id }}, '{{ other_user.username }}')"
-                    title="Delete"
-                  >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-                      <line x1="18" y1="6" x2="6" y2="18"/>
-                      <line x1="6" y1="6" x2="18" y2="18"/>
-                    </svg>
-                  </button>
-                {% endif %}
-              </div>
-              <div class="msg-meta">
-                <span class="msg-time">{{ message.created_at|time:"H:i" }}</span>
-                {% if message.sender == request.user %}
-                  <span class="msg-ticks {% if message.is_read %}read{% endif %}" title="{% if message.is_read %}Read{% else %}Sent{% endif %}">
-                    {% if message.is_read %}✓✓{% else %}✓{% endif %}
-                  </span>
-                {% endif %}
-              </div>
+          <div class="msg-stack">
+            <div class="msg-bubble"><span class="msg-bubble-text">{{ message.content }}</span>{% if message.sender == request.user %}<button class="msg-delete" onclick="deleteMessage({{ message.id }}, '{{ other_user.username }}')" title="Delete"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>{% endif %}</div>
+            <div class="msg-meta">
+              <span class="msg-time">{{ message.created_at|time:"H:i" }}</span>
+              {% if message.sender == request.user %}
+                <span class="msg-ticks {% if message.is_read %}read{% endif %}" title="{% if message.is_read %}Read{% else %}Sent{% endif %}">{% if message.is_read %}✓✓{% else %}✓{% endif %}</span>
+              {% endif %}
             </div>
           </div>
 

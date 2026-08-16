@@ -338,11 +338,8 @@ function buildBubble(msg, isMe) {
   return `
     <div class="msg-row ${isMe ? 'me' : ''}" id="msg-${msg.id}">
       ${avatarHtml}
-      <div>
-        <div class="msg-bubble">
-          ${escHtml(msg.content)}
-          ${deleteBtn}
-        </div>
+      <div class="msg-stack">
+        <div class="msg-bubble"><span class="msg-bubble-text">${escHtml(msg.content)}</span>${deleteBtn}</div>
         <div class="msg-meta">
           <span class="msg-time">${time}</span>
           ${ticks}
