@@ -30,12 +30,31 @@ class Message(models.Model):
         on_delete=models.CASCADE,
         related_name='sent_messages'
     )
-    content = models.CharField(max_length=1000)
+    content = models.CharField(max_length=1000, blank=True)
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    # Reply to another message in the same conversation
+    reply_to = models.ForeignKey(
+        'self',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='replies'
+    )
+
+    # Optional forwarded post card
+    forwarded_post = models.ForeignKey(
+        'posts.Post',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='forwarded_in_messages'
+    )
 
     class Meta:
         ordering = ['created_at']
 
     def __str__(self):
-        return f"{self.sender} → conversation {self.conversation.id}: {self.content[:30]}"
+        preview = self.content[:30] if self.content else '[forwarded post]'
+        return f"{self.sender} → conversation {self.conversation.id}: {preview}"

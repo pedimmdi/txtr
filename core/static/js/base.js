@@ -303,6 +303,148 @@ document.addEventListener('DOMContentLoaded', () => {
   attachRepostHandlers();
 });
 
+/* ── Forward post to DM ──────────────────────────────────── */
+let forwardPostId = null;
+let forwardSelectedUser = null;
+let forwardSearchTimer = null;
+
+const forwardModal = document.getElementById('forward-modal');
+const forwardInput = document.getElementById('forward-user-input');
+const forwardSuggestions = document.getElementById('forward-user-suggestions');
+const forwardCaption = document.getElementById('forward-caption');
+const forwardSendBtn = document.getElementById('forward-send');
+const forwardClose = document.getElementById('forward-modal-close');
+const forwardCancel = document.getElementById('forward-cancel');
+
+function openForwardModal(postId) {
+  forwardPostId = postId;
+  forwardSelectedUser = null;
+  if (forwardInput) forwardInput.value = '';
+  if (forwardCaption) forwardCaption.value = '';
+  if (forwardSuggestions) {
+    forwardSuggestions.style.display = 'none';
+    forwardSuggestions.innerHTML = '';
+  }
+  if (forwardSendBtn) forwardSendBtn.disabled = true;
+  if (forwardModal) forwardModal.style.display = 'flex';
+  forwardInput?.focus();
+}
+
+function closeForwardModal() {
+  if (forwardModal) forwardModal.style.display = 'none';
+  forwardPostId = null;
+  forwardSelectedUser = null;
+}
+
+async function searchForwardUsers(query) {
+  if (!forwardSuggestions) return;
+  if (!query) {
+    forwardSuggestions.style.display = 'none';
+    forwardSuggestions.innerHTML = '';
+    return;
+  }
+  try {
+    const res = await apiFetch(
+      `/api/v1/accounts/users/?search=${encodeURIComponent(query)}&page_size=8`
+    );
+    if (!res.ok) return;
+    const data = await res.json();
+    const users = data.results || data;
+    if (!Array.isArray(users) || users.length === 0) {
+      forwardSuggestions.style.display = 'block';
+      forwardSuggestions.innerHTML =
+        '<div class="dm-suggestion-item" style="cursor:default;color:var(--text-muted);">No users found</div>';
+      return;
+    }
+    forwardSuggestions.style.display = 'block';
+    forwardSuggestions.innerHTML = users.map(u => {
+      const name = u.username;
+      const initial = (name || '?')[0].toUpperCase();
+      const avatar = u.image
+        ? `<img src="${u.image}" class="avatar avatar-sm" alt="" />`
+        : `<div class="avatar-placeholder avatar-sm">${initial}</div>`;
+      return `
+        <div class="dm-suggestion-item" data-username="${name}" role="option">
+          ${avatar}
+          <div class="dm-suggestion-meta">
+            <div class="dm-suggestion-name">${name}</div>
+            <div class="dm-suggestion-handle">@${name}</div>
+          </div>
+          <span class="dm-suggestion-check">✓</span>
+        </div>`;
+    }).join('');
+
+    forwardSuggestions.querySelectorAll('.dm-suggestion-item[data-username]').forEach(item => {
+      item.addEventListener('click', () => {
+        forwardSuggestions.querySelectorAll('.dm-suggestion-item').forEach(el => {
+          el.classList.remove('is-active');
+        });
+        item.classList.add('is-active');
+        forwardSelectedUser = item.dataset.username;
+        if (forwardInput) forwardInput.value = forwardSelectedUser;
+        if (forwardSendBtn) forwardSendBtn.disabled = false;
+      });
+    });
+  } catch {
+    // silent
+  }
+}
+
+if (forwardInput) {
+  forwardInput.addEventListener('input', () => {
+    forwardSelectedUser = null;
+    if (forwardSendBtn) forwardSendBtn.disabled = true;
+    clearTimeout(forwardSearchTimer);
+    forwardSearchTimer = setTimeout(
+      () => searchForwardUsers(forwardInput.value.trim()),
+      250
+    );
+  });
+}
+
+if (forwardClose) forwardClose.addEventListener('click', closeForwardModal);
+if (forwardCancel) forwardCancel.addEventListener('click', closeForwardModal);
+if (forwardModal) {
+  forwardModal.addEventListener('click', e => {
+    if (e.target === forwardModal) closeForwardModal();
+  });
+}
+
+if (forwardSendBtn) {
+  forwardSendBtn.addEventListener('click', async () => {
+    const username = forwardSelectedUser || forwardInput?.value.trim();
+    if (!username || !forwardPostId) return;
+
+    forwardSendBtn.disabled = true;
+    forwardSendBtn.textContent = 'Sending…';
+
+    const payload = {
+      forwarded_post: Number(forwardPostId),
+    };
+    const caption = (forwardCaption?.value || '').trim();
+    if (caption) payload.content = caption;
+
+    try {
+      const res = await apiFetch(`/api/v1/dm/${encodeURIComponent(username)}/`, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+      if (res.status === 404) {
+        showFlash('User not found.', 'error');
+        return;
+      }
+      if (!res.ok) throw new Error();
+      closeForwardModal();
+      showFlash(`Post sent to @${username}`, 'success');
+    } catch {
+      showFlash('Could not forward post.', 'error');
+    } finally {
+      forwardSendBtn.disabled = false;
+      forwardSendBtn.textContent = 'Send';
+    }
+  });
+}
+
 /* Expose globally for dynamic content (e.g., after loading new posts) */
 window.txtr = {
   apiFetch,
@@ -310,4 +452,5 @@ window.txtr = {
   attachLikeHandlers,
   attachBookmarkHandlers,
   attachRepostHandlers,
+  openForwardModal,
 };

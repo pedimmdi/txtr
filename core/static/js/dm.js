@@ -1,6 +1,6 @@
 /* ============================================================
    txtr — dm.js
-   DM list modal + conversation: send, delete, poll new msgs
+   DM list modal + conversation: send, delete, poll, reply
    ============================================================ */
 
 'use strict';
@@ -166,7 +166,7 @@ if (newDmGo) {
 }
 
 /* ════════════════════════════════════════════════════════════
-   CONVERSATION PAGE — send, delete, poll
+   CONVERSATION PAGE — send, delete, poll, reply
    ════════════════════════════════════════════════════════════ */
 
 const messagesArea = document.getElementById('messages-area');
@@ -176,6 +176,46 @@ const OTHER_USER   = window.OTHER_USERNAME;
 const ME           = window.MY_USERNAME;
 
 let lastMsgId = 0;
+let replyToId = null;
+
+const replyBar     = document.getElementById('reply-bar');
+const replyBarUser = document.getElementById('reply-bar-user');
+const replyBarText = document.getElementById('reply-bar-text');
+const replyBarClose = document.getElementById('reply-bar-close');
+
+function clearReply() {
+  replyToId = null;
+  if (replyBar) replyBar.style.display = 'none';
+  if (replyBarUser) replyBarUser.textContent = '';
+  if (replyBarText) replyBarText.textContent = '';
+}
+
+function setReply(id, username, text) {
+  replyToId = id;
+  if (replyBarUser) replyBarUser.textContent = username || '';
+  if (replyBarText) replyBarText.textContent = text || '';
+  if (replyBar) replyBar.style.display = 'flex';
+  msgInput?.focus();
+}
+
+if (replyBarClose) {
+  replyBarClose.addEventListener('click', clearReply);
+}
+
+function attachReplyButtons(root = document) {
+  root.querySelectorAll('.msg-reply-btn').forEach(btn => {
+    if (btn._replyAttached) return;
+    btn._replyAttached = true;
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      setReply(
+        btn.dataset.msgId,
+        btn.dataset.msgUser,
+        btn.dataset.msgText
+      );
+    });
+  });
+}
 
 if (msgInput) {
   msgInput.addEventListener('input', () => {
@@ -195,6 +235,7 @@ if (msgInput) {
 
   scrollToBottom(false);
   lastMsgId = getLastMessageId();
+  attachReplyButtons();
   setInterval(() => pollMessages(), 15000);
 }
 
@@ -205,21 +246,39 @@ async function sendMessage() {
 
   msgSendBtn.disabled = true;
   const savedValue = content;
+  const savedReplyId = replyToId;
+  const savedReplyUser = replyBarUser?.textContent || '';
+  const savedReplyText = replyBarText?.textContent || '';
 
-  const tempId  = `temp-${Date.now()}`;
-  const tempMsg = buildBubble(
-    { id: tempId, content, sender_username: ME, created_at: new Date().toISOString() },
-    true
-  );
+  const payload = { content: savedValue };
+  if (savedReplyId) payload.reply_to = Number(savedReplyId);
+
+  const tempId = `temp-${Date.now()}`;
+  const tempMsg = buildBubble({
+    id: tempId,
+    content: savedValue,
+    sender_username: ME,
+    created_at: new Date().toISOString(),
+    is_read: false,
+    reply_to: savedReplyId
+      ? {
+          id: savedReplyId,
+          content: savedReplyText,
+          sender_username: savedReplyUser,
+        }
+      : null,
+  }, true);
+
   messagesArea.insertAdjacentHTML('beforeend', tempMsg);
   msgInput.value = '';
   msgInput.style.height = 'auto';
+  clearReply();
   scrollToBottom();
 
   try {
     const res = await window.txtr.apiFetch(`/api/v1/dm/${OTHER_USER}/`, {
       method: 'POST',
-      body: JSON.stringify({ content: savedValue }),
+      body: JSON.stringify(payload),
     });
 
     if (!res.ok) throw new Error();
@@ -227,6 +286,9 @@ async function sendMessage() {
 
     const tempEl = document.getElementById(tempId);
     if (tempEl) tempEl.outerHTML = buildBubble(msg, true);
+
+    attachReplyButtons();
+    attachQuoteJump();
 
     const realId = parseInt(msg.id, 10);
     if (!Number.isNaN(realId) && realId > lastMsgId) {
@@ -236,6 +298,9 @@ async function sendMessage() {
     document.getElementById(tempId)?.remove();
     msgInput.value = savedValue;
     msgInput.style.height = 'auto';
+    if (savedReplyId) {
+      setReply(savedReplyId, savedReplyUser, savedReplyText);
+    }
     window.txtr.showFlash('Message not sent. Try again.', 'error');
   } finally {
     msgSendBtn.disabled = msgInput.value.trim().length === 0;
@@ -268,10 +333,11 @@ async function pollMessages() {
     const all  = data.results || data;
     if (!Array.isArray(all)) return;
 
+    let added = false;
+
     all.forEach(msg => {
       const el = document.getElementById(`msg-${msg.id}`);
       if (el) {
-        // Update read ticks on own messages
         if (msg.sender_username === ME) {
           const tick = el.querySelector('.msg-ticks');
           if (tick) {
@@ -292,15 +358,19 @@ async function pollMessages() {
       if (Number(msg.id) <= lastMsgId) return;
       const isMe = msg.sender_username === ME;
       messagesArea.insertAdjacentHTML('beforeend', buildBubble(msg, isMe));
+      added = true;
     });
+
+    if (added) {
+      attachReplyButtons();
+      attachQuoteJump();
+      scrollToBottom();
+    }
 
     const ids = all.map(m => Number(m.id)).filter(n => !Number.isNaN(n));
     if (ids.length) {
       const maxId = Math.max(...ids);
-      if (maxId > lastMsgId) {
-        lastMsgId = maxId;
-        scrollToBottom();
-      }
+      if (maxId > lastMsgId) lastMsgId = maxId;
     }
   } catch {
     // Silently fail — polling is best-effort
@@ -335,15 +405,57 @@ function buildBubble(msg, isMe) {
     ? `<span class="msg-ticks ${isRead ? 'read' : ''}" title="${isRead ? 'Read' : 'Sent'}">${isRead ? '✓✓' : '✓'}</span>`
     : '';
 
+  let quoteHtml = '';
+  if (msg.reply_to) {
+    const qText = msg.reply_to.content
+      || (msg.reply_to.has_forwarded_post ? 'Forwarded post' : '');
+    const parentId = msg.reply_to.id || '';
+    quoteHtml = `
+      <div class="msg-reply-quote" data-reply-to="${parentId}" title="Jump to message">
+        <span class="msg-reply-quote-user">${escHtml(msg.reply_to.sender_username || '')}</span>
+        <span class="msg-reply-quote-text">${escHtml(qText)}</span>
+      </div>`;
+  }
+
+  let forwardHtml = '';
+  if (msg.forwarded_post) {
+    const fp = msg.forwarded_post;
+    forwardHtml = `
+      <a href="${fp.url || `/posts/${fp.id}/`}" class="msg-forward-card">
+        <div class="msg-forward-author">@${escHtml(fp.author_username || '')}</div>
+        <div class="msg-forward-content">${escHtml(fp.content || '')}</div>
+        <div class="msg-forward-link">View post</div>
+      </a>`;
+  }
+
+  const textHtml = msg.content
+    ? `<span class="msg-bubble-text">${escHtml(msg.content)}</span>`
+    : '';
+
+  const previewText = (msg.content || (msg.forwarded_post ? 'Forwarded post' : '')).slice(0, 80);
+  const replyBtn = String(msg.id).indexOf('temp-') === 0
+    ? ''
+    : `<button type="button" class="msg-reply-btn"
+         data-msg-id="${msg.id}"
+         data-msg-user="${escHtml(msg.sender_username || (isMe ? ME : OTHER_USER))}"
+         data-msg-text="${escHtml(previewText)}"
+         title="Reply">Reply</button>`;
+
   return `
     <div class="msg-row ${isMe ? 'me' : ''}" id="msg-${msg.id}">
       ${avatarHtml}
       <div class="msg-stack">
-        <div class="msg-bubble"><span class="msg-bubble-text">${escHtml(msg.content)}</span>${deleteBtn}</div>
+        <div class="msg-bubble">
+          ${quoteHtml}
+          ${forwardHtml}
+          ${textHtml}
+          ${deleteBtn}
+        </div>
         <div class="msg-meta">
           <span class="msg-time">${time}</span>
           ${ticks}
         </div>
+        ${replyBtn}
       </div>
     </div>`;
 }
@@ -373,4 +485,30 @@ function escHtml(str) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
+}
+
+function highlightMessage(msgId) {
+  if (!msgId) return;
+  const el = document.getElementById(`msg-${msgId}`);
+  if (!el) {
+    window.txtr.showFlash('Original message is not loaded.', 'info');
+    return;
+  }
+  document.querySelectorAll('.msg-row.msg-highlight').forEach(r => {
+    r.classList.remove('msg-highlight');
+  });
+  el.classList.add('msg-highlight');
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  setTimeout(() => el.classList.remove('msg-highlight'), 1400);
+}
+
+function attachQuoteJump(root = document) {
+  root.querySelectorAll('.msg-reply-quote[data-reply-to]').forEach(quote => {
+    if (quote._jumpAttached) return;
+    quote._jumpAttached = true;
+    quote.addEventListener('click', e => {
+      e.stopPropagation();
+      highlightMessage(quote.dataset.replyTo);
+    });
+  });
 }

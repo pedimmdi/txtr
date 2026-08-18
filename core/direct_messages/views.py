@@ -61,7 +61,11 @@ def dm_conversation_view(request, username):
     existing.messages.exclude(sender=request.user).filter(is_read=False).update(is_read=True)
 
     messages_list = existing.messages.select_related(
-        'sender', 'sender__profile'
+        'sender', 'sender__profile',
+        'reply_to', 'reply_to__sender__profile',
+        'forwarded_post', 'forwarded_post__author__profile',
+        'forwarded_post__original_post',
+        'forwarded_post__original_post__author__profile',
     )
 
     return render(request, 'direct_messages/conversation.html', {

@@ -177,6 +177,22 @@
         {% endif %}
 
         <span class="action-spacer"></span>
+        
+        {% if request.user.is_authenticated %}
+          <button
+            class="action-btn"
+            data-action="forward"
+            data-post-id="{{ post.id }}"
+            title="Forward to message"
+            onclick="event.stopPropagation(); window.txtr.openForwardModal({{ post.id }})"
+          >
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+              <line x1="22" y1="2" x2="11" y2="13"/>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+            </svg>
+          </button>
+        {% endif %}
 
         <!-- Bookmark -->
         {% if request.user.is_authenticated %}

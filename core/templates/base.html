@@ -233,6 +233,38 @@
 
   {% endif %}
 
+  <!-- Forward post modal -->
+  <div class="forward-modal" id="forward-modal" style="display:none;">
+    <div class="modal" style="max-width:420px;">
+      <div class="modal-header">
+        <span class="modal-title">Forward post</span>
+        <button type="button" class="modal-close" id="forward-modal-close" aria-label="Close">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2.5" stroke-linecap="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group" style="margin-bottom:12px;">
+          <label class="form-label" for="forward-user-input">Send to</label>
+          <input class="form-input" type="text" id="forward-user-input"
+                 placeholder="Search username" autocomplete="off" />
+          <div id="forward-user-suggestions" class="dm-suggestions" style="display:none;"></div>
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label" for="forward-caption">Message (optional)</label>
+          <textarea class="form-input" id="forward-caption" rows="2"
+                    maxlength="500" placeholder="Add a message…"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" id="forward-cancel">Cancel</button>
+        <button type="button" class="btn btn-primary" id="forward-send" disabled>Send</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ── Flash Messages Container ───────────────────────── -->
   <div id="flash-container" class="flash-container">
     {% for message in messages %}

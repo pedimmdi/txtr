@@ -68,12 +68,19 @@ class ConversationDetailView(APIView):
         ).update(is_read=True)
 
         messages = conversation.messages.select_related(
-            'sender', 'sender__profile'
+            'sender',
+            'sender__profile',
+            'reply_to',
+            'reply_to__sender__profile',
+            'forwarded_post',
+            'forwarded_post__author__profile',
+            'forwarded_post__original_post',
+            'forwarded_post__original_post__author__profile',
         )
 
         paginator = StandardResultsSetPagination()
         page = paginator.paginate_queryset(messages, request)
-        serializer = MessageSerializer(page, many=True)
+        serializer = MessageSerializer(page, many=True, context={'request': request})
         return paginator.get_paginated_response(serializer.data)
 
     def post(self, request, username):
@@ -81,21 +88,56 @@ class ConversationDetailView(APIView):
         if error:
             return error
 
-        content = request.data.get('content', '').strip()
-        if not content:
+        content = (request.data.get('content') or '').strip()
+        reply_to_id = request.data.get('reply_to') or request.data.get('reply_to_id')
+        forwarded_post_id = (
+            request.data.get('forwarded_post')
+            or request.data.get('forwarded_post_id')
+        )
+
+        reply_to = None
+        if reply_to_id:
+            try:
+                reply_to = Message.objects.get(
+                    pk=int(reply_to_id),
+                    conversation=conversation
+                )
+            except (Message.DoesNotExist, TypeError, ValueError):
+                return Response(
+                    {'error': 'reply_to message not found in this conversation'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+        forwarded_post = None
+        if forwarded_post_id:
+            from posts.models import Post
+            try:
+                forwarded_post = Post.objects.select_related(
+                    'author', 'author__profile', 'original_post', 'original_post__author__profile'
+                ).get(pk=int(forwarded_post_id))
+            except (Post.DoesNotExist, TypeError, ValueError):
+                return Response(
+                    {'error': 'forwarded_post not found'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+        if not content and not forwarded_post:
             return Response(
-                {'error': 'content is required'},
+                {'error': 'content or forwarded_post is required'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
         message = Message.objects.create(
             conversation=conversation,
             sender=request.user,
-            content=content
+            content=content,
+            reply_to=reply_to,
+            forwarded_post=forwarded_post,
         )
+        # Touch updated_at
         conversation.save()
 
-        serializer = MessageSerializer(message)
+        serializer = MessageSerializer(message, context={'request': request})
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
