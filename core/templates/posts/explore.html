@@ -11,12 +11,10 @@
 
 {% block content %}
 
-<!-- ── Page Header ───────────────────────────────────────── -->
 <header class="page-header">
   <span class="page-title">Explore</span>
 </header>
 
-<!-- ── Search Box ────────────────────────────────────────── -->
 <div class="explore-search">
   <form method="GET" action="{% url 'explore' %}">
     <div class="explore-search-box">
@@ -32,143 +30,131 @@
         placeholder="Search posts, people, hashtags…"
         value="{{ query }}"
         autocomplete="off"
-        autofocus
       />
     </div>
   </form>
 </div>
 
-<!-- ════════════════════════════════════════════════════════
-     SEARCH RESULTS
-     ════════════════════════════════════════════════════════ -->
-{% if query %}
-
-  <!-- ── People ─────────────────────────────────────────── -->
-  {% if users %}
-    <div class="explore-section-label">People</div>
-    {% for profile in users %}
-      <a href="{% url 'profile' profile.username %}" class="user-result">
-        {% if profile.image %}
-          <img src="{{ profile.image.url }}" alt="{{ profile.username }}"
-               class="avatar avatar-lg" />
-        {% else %}
-          <div class="avatar-placeholder avatar-lg">{{ profile.username|first|upper }}</div>
-        {% endif %}
-        <div class="user-result-info">
-          <div class="user-result-name">{{ profile.username }}</div>
-          <div class="user-result-handle">@{{ profile.username }}</div>
-          {% if profile.bio %}
-            <div class="user-result-bio">{{ profile.bio }}</div>
-          {% endif %}
-        </div>
-        {% if request.user.is_authenticated and profile.user != request.user %}
-          <button class="btn btn-outline btn-sm follow-btn"
-                  data-username="{{ profile.username }}"
-                  data-following="{{ profile.is_followed|lower|default:'false' }}"
-                  onclick="event.preventDefault(); event.stopPropagation(); handleFollow(this)">
-            {% if profile.is_followed %}Following{% else %}Follow{% endif %}
-          </button>
-        {% endif %}
-      </a>
-    {% endfor %}
-  {% endif %}
-
-  <!-- ── Posts ──────────────────────────────────────────── -->
-  {% if posts %}
-    <div class="explore-section-label">Posts</div>
-    <div class="post-list">
-      {% for post in posts %}
-        {% include "posts/_post_card.html" with post=post %}
-      {% endfor %}
-    </div>
-
-    <!-- Pagination -->
-    {% if posts.has_other_pages %}
-      <div class="pagination">
-        {% if posts.has_previous %}
-          <a href="?search={{ query }}&page={{ posts.previous_page_number }}">&larr;</a>
-        {% else %}
-          <span class="disabled">&larr;</span>
-        {% endif %}
-        {% for num in posts.paginator.page_range %}
-          {% if posts.number == num %}
-            <span class="current">{{ num }}</span>
-          {% elif num > posts.number|add:"-3" and num < posts.number|add:"3" %}
-            <a href="?search={{ query }}&page={{ num }}">{{ num }}</a>
-          {% endif %}
-        {% endfor %}
-        {% if posts.has_next %}
-          <a href="?search={{ query }}&page={{ posts.next_page_number }}">&rarr;</a>
-        {% else %}
-          <span class="disabled">&rarr;</span>
+{% if query and users %}
+  <div class="explore-section-label">People</div>
+  {% for profile in users %}
+    <a href="{% url 'profile' profile.username %}" class="user-result">
+      {% if profile.image %}
+        <img src="{{ profile.image.url }}" alt="{{ profile.username }}" class="avatar avatar-lg" />
+      {% else %}
+        <div class="avatar-placeholder avatar-lg">{{ profile.username|first|upper }}</div>
+      {% endif %}
+      <div class="user-result-info">
+        <div class="user-result-name">{{ profile.username }}</div>
+        <div class="user-result-handle">@{{ profile.username }}</div>
+        {% if profile.bio %}
+          <div class="user-result-bio">{{ profile.bio }}</div>
         {% endif %}
       </div>
-    {% endif %}
-  {% endif %}
+    </a>
+  {% endfor %}
+{% endif %}
 
-  <!-- Nothing found -->
-  {% if not users and not posts %}
+{% if query %}
+  <div class="explore-section-label">Posts</div>
+{% endif %}
+
+<div class="post-list" id="post-list">
+  {% for post in posts %}
+    {% include "posts/_post_card.html" with post=post %}
+  {% empty %}
     <div class="empty-state">
       <div class="empty-state-icon">🔍</div>
-      <div class="empty-state-title">No results for "{{ query }}"</div>
-      <p class="empty-state-text">Try different keywords or check the spelling.</p>
+      <div class="empty-state-title">
+        {% if query %}No results for "{{ query }}"{% else %}No posts yet{% endif %}
+      </div>
+      <p class="empty-state-text">
+        {% if query %}Try different keywords.{% else %}Be the first to post something.{% endif %}
+      </p>
     </div>
-  {% endif %}
+  {% endfor %}
+</div>
 
-<!-- ════════════════════════════════════════════════════════
-     DEFAULT — Trending hashtags + suggested users
-     ════════════════════════════════════════════════════════ -->
-{% else %}
+{% if posts.has_other_pages %}
+  <div class="pagination">
+    {% if posts.has_previous %}
+      <a href="?{% if query %}search={{ query }}&{% endif %}page={{ posts.previous_page_number }}">&larr;</a>
+    {% else %}
+      <span class="disabled">&larr;</span>
+    {% endif %}
+    {% for num in posts.paginator.page_range %}
+      {% if posts.number == num %}
+        <span class="current">{{ num }}</span>
+      {% elif num > posts.number|add:"-3" and num < posts.number|add:"3" %}
+        <a href="?{% if query %}search={{ query }}&{% endif %}page={{ num }}">{{ num }}</a>
+      {% endif %}
+    {% endfor %}
+    {% if posts.has_next %}
+      <a href="?{% if query %}search={{ query }}&{% endif %}page={{ posts.next_page_number }}">&rarr;</a>
+    {% else %}
+      <span class="disabled">&rarr;</span>
+    {% endif %}
+  </div>
+{% endif %}
 
-  <!-- Trending Hashtags -->
-  {% if trending_hashtags %}
-    <div class="explore-section-label">Trending</div>
+{% endblock %}
+
+{% block sidebar_right %}
+
+<form method="GET" action="{% url 'explore' %}">
+  <div class="search-box">
+    <svg class="search-box-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="2" stroke-linecap="round">
+      <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+    </svg>
+    <input type="text" name="search" placeholder="Search txtr" autocomplete="off"
+           value="{{ request.GET.search }}" />
+  </div>
+</form>
+
+{% if trending_hashtags %}
+<div class="widget" id="trending-widget">
+  <div class="widget-title">Trending</div>
+  <div id="trending-list">
     {% for tag in trending_hashtags %}
-      <a href="{% url 'hashtag-posts' tag.name %}" class="hashtag-result">
-        <div class="hashtag-result-left">
-          <span class="hashtag-result-tag">#{{ tag.name }}</span>
-          <span class="hashtag-result-count">
-            {{ tag.posts_count }} post{{ tag.posts_count|pluralize }}
-          </span>
-        </div>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-             stroke-width="2" stroke-linecap="round" style="color:var(--text-muted)">
-          <polyline points="9 18 15 12 9 6"/>
-        </svg>
+      <a href="{% url 'hashtag-posts' tag.name %}" class="trending-item">
+        <span class="trending-label">Hashtag</span>
+        <span class="trending-tag">#{{ tag.name }}</span>
+        <span class="trending-count">{{ tag.posts_count }} post{{ tag.posts_count|pluralize }}</span>
       </a>
     {% endfor %}
-  {% endif %}
+  </div>
+</div>
+{% endif %}
 
-  <!-- People to Follow -->
-  {% if suggested_users %}
-    <div class="explore-section-label">People to follow</div>
-    {% for profile in suggested_users %}
-      <a href="{% url 'profile' profile.username %}" class="user-result">
+{% if suggested_users %}
+<div class="widget">
+  <div class="widget-title">Who to follow</div>
+  {% for profile in suggested_users %}
+    <div class="who-to-follow-item">
+      <a href="{% url 'profile' profile.username %}">
         {% if profile.image %}
-          <img src="{{ profile.image.url }}" alt="{{ profile.username }}"
-               class="avatar avatar-lg" />
+          <img src="{{ profile.image.url }}" alt="{{ profile.username }}" class="avatar avatar-md" />
         {% else %}
-          <div class="avatar-placeholder avatar-lg">{{ profile.username|first|upper }}</div>
-        {% endif %}
-        <div class="user-result-info">
-          <div class="user-result-name">{{ profile.username }}</div>
-          <div class="user-result-handle">@{{ profile.username }}</div>
-          {% if profile.bio %}
-            <div class="user-result-bio">{{ profile.bio }}</div>
-          {% endif %}
-        </div>
-        {% if request.user.is_authenticated %}
-          <button class="btn btn-primary btn-sm follow-btn"
-                  data-username="{{ profile.username }}"
-                  data-following="false"
-                  onclick="event.preventDefault(); event.stopPropagation(); handleFollow(this)">
-            Follow
-          </button>
+          <div class="avatar-placeholder avatar-md">{{ profile.username|first|upper }}</div>
         {% endif %}
       </a>
-    {% endfor %}
-  {% endif %}
-
+      <div class="who-to-follow-info">
+        <a href="{% url 'profile' profile.username %}" class="who-to-follow-name">
+          {{ profile.username }}
+        </a>
+        <div class="who-to-follow-handle">@{{ profile.username }}</div>
+      </div>
+      {% if request.user.is_authenticated %}
+        <button
+          class="btn btn-outline btn-sm follow-btn"
+          data-username="{{ profile.username }}"
+          data-following="false"
+        >Follow</button>
+      {% endif %}
+    </div>
+  {% endfor %}
+</div>
 {% endif %}
 
 {% endblock %}

@@ -601,7 +601,7 @@
   cursor: pointer;
   padding: 2px 0;
   margin-top: 2px;
-  opacity: 0.55;
+  opacity: 1;
   transition: opacity var(--transition), color var(--transition);
 }
 

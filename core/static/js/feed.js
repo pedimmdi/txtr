@@ -170,22 +170,27 @@ document.addEventListener('click', e => {
 /* ── Post Menu (edit / delete) ───────────────────────────── */
 let currentMenuEl = null;
 
-window.openPostMenu = function(postId, triggerBtn) {
-  // Close any open menu
+window.openPostMenu = function (postId, triggerBtn) {
   document.querySelectorAll('.post-context-menu').forEach(m => m.remove());
+  currentMenuEl = null;
+
+  const header = triggerBtn.closest('.post-header') || triggerBtn.parentElement;
+  if (getComputedStyle(header).position === 'static') {
+    header.style.position = 'relative';
+  }
 
   const menu = document.createElement('div');
-  menu.className = 'dropdown-menu post-context-menu open';
-  menu.style.cssText = 'position:fixed; min-width:160px; z-index:200;';
+  menu.className = 'post-context-menu';
+  menu.setAttribute('role', 'menu');
   menu.innerHTML = `
-    <a href="/posts/${postId}/edit/" class="dropdown-item">
+    <a href="/posts/${postId}/edit/" class="dropdown-item" role="menuitem">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
         <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
         <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
       </svg>
       Edit post
     </a>
-    <button class="dropdown-item danger" onclick="deletePost(${postId}, this)">
+    <button type="button" class="dropdown-item danger" role="menuitem" data-delete-post="${postId}">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
         <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
         <path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
@@ -194,31 +199,45 @@ window.openPostMenu = function(postId, triggerBtn) {
     </button>
   `;
 
-  const rect = triggerBtn.getBoundingClientRect();
-  menu.style.top  = (rect.bottom + 4) + 'px';
-  menu.style.left = (rect.left - 120) + 'px';
-  document.body.appendChild(menu);
+  // Anchor under the ⋯ button inside the post header
+  menu.style.position = 'absolute';
+  menu.style.top = 'calc(100% + 6px)';
+  menu.style.right = '0';
+  menu.style.left = 'auto';
+  menu.style.zIndex = '50';
+
+  header.appendChild(menu);
   currentMenuEl = menu;
+
+  menu.querySelector('[data-delete-post]')?.addEventListener('click', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    deletePost(postId);
+  });
 };
 
 document.addEventListener('click', e => {
-  if (currentMenuEl && !currentMenuEl.contains(e.target)) {
-    currentMenuEl.remove();
-    currentMenuEl = null;
-  }
+  if (!currentMenuEl) return;
+  if (e.target.closest('.post-menu-btn')) return;
+  if (currentMenuEl.contains(e.target)) return;
+  currentMenuEl.remove();
+  currentMenuEl = null;
 });
 
-window.deletePost = async function(postId, btn) {
+window.deletePost = async function (postId) {
   if (!confirm('Delete this post?')) return;
 
   try {
-    const res = await window.txtr.apiFetch(`/api/v1/posts/${postId}/`, { method: 'DELETE' });
+    const res = await window.txtr.apiFetch(`/api/v1/posts/${postId}/`, {
+      method: 'DELETE',
+    });
     if (!res.ok) throw new Error();
 
-    const card = document.querySelector(`[data-post-id="${postId}"].post-card`);
-    if (card) card.remove();
-
-    if (currentMenuEl) { currentMenuEl.remove(); currentMenuEl = null; }
+    document.querySelector(`.post-card[data-post-id="${postId}"]`)?.remove();
+    if (currentMenuEl) {
+      currentMenuEl.remove();
+      currentMenuEl = null;
+    }
     window.txtr.showFlash('Post deleted.', 'info');
   } catch {
     window.txtr.showFlash('Could not delete post.', 'error');

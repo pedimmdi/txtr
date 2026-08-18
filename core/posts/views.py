@@ -75,22 +75,30 @@ def bookmarks_view(request):
 
 def explore_view(request):
     query = request.GET.get('search', '').strip()
-    posts = users = None
+    users = None
 
     if query:
-        posts_qs  = get_annotated_posts(request.user).filter(content__icontains=query)
-        paginator = Paginator(posts_qs, 20)
-        posts     = paginator.get_page(request.GET.get('page', 1))
-        users     = Profile.objects.filter(username__icontains=query).select_related('user')[:6]
+        posts_qs = get_annotated_posts(request.user).filter(content__icontains=query)
+        users = Profile.objects.filter(
+            username__icontains=query
+        ).select_related('user')[:6]
+    else:
+        # Explore main feed: everyone's posts
+        posts_qs = get_annotated_posts(request.user)
 
+    paginator = Paginator(posts_qs, 20)
+    posts = paginator.get_page(request.GET.get('page', 1))
+
+    # Sidebar: newest trending + recent users (not random)
     trending_hashtags = Hashtag.objects.annotate(
         posts_count=Count('posts')
-    ).order_by('-posts_count')[:10]
+    ).order_by('-posts_count')[:3]
 
     following_ids = []
     if request.user.is_authenticated:
         following_ids = list(
-            Follow.objects.filter(follower=request.user).values_list('following_id', flat=True)
+            Follow.objects.filter(follower=request.user)
+            .values_list('following_id', flat=True)
         )
 
     exclude_user = request.user if request.user.is_authenticated else None
@@ -99,15 +107,15 @@ def explore_view(request):
         .exclude(user=exclude_user)
         .exclude(user_id__in=following_ids)
         .select_related('user')
-        .order_by('?')[:6]
+        .order_by('-user__created_date')[:3]
     )
 
     return render(request, 'posts/explore.html', {
-        'query':             query,
-        'posts':             posts,
-        'users':             users,
+        'query': query,
+        'posts': posts,
+        'users': users,
         'trending_hashtags': trending_hashtags,
-        'suggested_users':   suggested_users,
+        'suggested_users': suggested_users,
     })
 
 

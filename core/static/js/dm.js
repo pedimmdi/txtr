@@ -202,18 +202,27 @@ if (replyBarClose) {
   replyBarClose.addEventListener('click', clearReply);
 }
 
-function attachReplyButtons(root = document) {
-  root.querySelectorAll('.msg-reply-btn').forEach(btn => {
-    if (btn._replyAttached) return;
-    btn._replyAttached = true;
-    btn.addEventListener('click', e => {
+/* One listener for all current + future Reply / quote clicks */
+if (messagesArea) {
+  messagesArea.addEventListener('click', e => {
+    const replyBtn = e.target.closest('.msg-reply-btn');
+    if (replyBtn) {
+      e.preventDefault();
       e.stopPropagation();
       setReply(
-        btn.dataset.msgId,
-        btn.dataset.msgUser,
-        btn.dataset.msgText
+        replyBtn.dataset.msgId,
+        replyBtn.dataset.msgUser,
+        replyBtn.dataset.msgText
       );
-    });
+      return;
+    }
+
+    const quote = e.target.closest('.msg-reply-quote[data-reply-to]');
+    if (quote) {
+      e.preventDefault();
+      e.stopPropagation();
+      highlightMessage(quote.dataset.replyTo);
+    }
   });
 }
 
@@ -235,7 +244,6 @@ if (msgInput) {
 
   scrollToBottom(false);
   lastMsgId = getLastMessageId();
-  attachReplyButtons();
   setInterval(() => pollMessages(), 15000);
 }
 
@@ -284,18 +292,18 @@ async function sendMessage() {
     if (!res.ok) throw new Error();
     const msg = await res.json();
 
-    const tempEl = document.getElementById(tempId);
+    const tempEl = document.getElementById(`msg-${tempId}`);
     if (tempEl) tempEl.outerHTML = buildBubble(msg, true);
 
-    attachReplyButtons();
-    attachQuoteJump();
+    // attachReplyButtons();
+    // attachQuoteJump();
 
     const realId = parseInt(msg.id, 10);
     if (!Number.isNaN(realId) && realId > lastMsgId) {
       lastMsgId = realId;
     }
   } catch {
-    document.getElementById(tempId)?.remove();
+    document.getElementById(`msg-${tempId}`)?.remove();
     msgInput.value = savedValue;
     msgInput.style.height = 'auto';
     if (savedReplyId) {
@@ -362,8 +370,6 @@ async function pollMessages() {
     });
 
     if (added) {
-      attachReplyButtons();
-      attachQuoteJump();
       scrollToBottom();
     }
 
@@ -502,13 +508,13 @@ function highlightMessage(msgId) {
   setTimeout(() => el.classList.remove('msg-highlight'), 1400);
 }
 
-function attachQuoteJump(root = document) {
-  root.querySelectorAll('.msg-reply-quote[data-reply-to]').forEach(quote => {
-    if (quote._jumpAttached) return;
-    quote._jumpAttached = true;
-    quote.addEventListener('click', e => {
-      e.stopPropagation();
-      highlightMessage(quote.dataset.replyTo);
-    });
-  });
-}
+// function attachQuoteJump(root = document) {
+//   root.querySelectorAll('.msg-reply-quote[data-reply-to]').forEach(quote => {
+//     if (quote._jumpAttached) return;
+//     quote._jumpAttached = true;
+//     quote.addEventListener('click', e => {
+//       e.stopPropagation();
+//       highlightMessage(quote.dataset.replyTo);
+//     });
+//   });
+// }

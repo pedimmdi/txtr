@@ -655,3 +655,113 @@ ul, ol { list-style: none; }
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-dim);
 }
+
+/* Forward modal user suggestions (must live in base.css — feed has no dm.css) */
+.dm-suggestions {
+  margin-top: 8px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  overflow: hidden;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.dm-suggestion-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: background var(--transition);
+  border-bottom: 1px solid var(--border);
+}
+
+.dm-suggestion-item:last-child { border-bottom: none; }
+
+.dm-suggestion-item:hover,
+.dm-suggestion-item.is-active {
+  background: rgba(124, 110, 255, 0.12);
+}
+
+.dm-suggestion-item .avatar,
+.dm-suggestion-item .avatar-placeholder {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+}
+
+.dm-suggestion-meta { flex: 1; min-width: 0; }
+
+.dm-suggestion-name {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.dm-suggestion-handle {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.dm-suggestion-check {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid var(--border-light);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: var(--accent);
+  border-color: var(--accent);
+  font-size: 12px;
+  line-height: 1;
+}
+
+.dm-suggestion-item.is-active .dm-suggestion-check {
+  display: flex;
+}
+
+/* Own-post context menu (edit / delete) */
+.post-context-menu {
+  position: absolute;
+  min-width: 168px;
+  z-index: 50;
+  display: block;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+  padding: 4px 0;
+}
+
+.post-context-menu .dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: transparent;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.post-context-menu .dropdown-item:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.post-context-menu .dropdown-item.danger:hover {
+  background: var(--danger-dim);
+  color: var(--danger);
+}
