@@ -18,6 +18,7 @@ def get_annotated_comments(user):
     """
     Returns a Comment queryset annotated with likes_count, is_liked, replies_count.
     distinct=True prevents double-counting when multiple JOINs are involved.
+    Explicit order_by keeps pagination deterministic.
     """
     qs = Comment.objects.select_related('author', 'author__profile').annotate(
         likes_count=Count('comment_likes', distinct=True),
@@ -26,7 +27,7 @@ def get_annotated_comments(user):
     if user and user.is_authenticated:
         user_likes = CommentLike.objects.filter(comment=OuterRef('pk'), user=user)
         qs = qs.annotate(is_liked=Exists(user_likes))
-    return qs
+    return qs.order_by('created_date', 'id')
 
 
 class CommentListCreateView(generics.ListCreateAPIView):
