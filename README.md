@@ -1,7 +1,8 @@
 # txtr
 
-A minimal, Twitter-like social network built with Django and Django REST Framework. Text-only posts, real-time notifications, direct messaging, and a clean dark-themed UI.
+[![Tests](https://github.com/pedimmdi/txtr/actions/workflows/tests.yml/badge.svg)](https://github.com/pedimmdi/txtr/actions/workflows/tests.yml)
 
+A minimal, Twitter-like social network built with Django and Django REST Framework. Text-only posts, real-time notifications, direct messaging, and a clean dark-themed UI.
 ---
 
 ## Features
@@ -210,6 +211,16 @@ Most list endpoints support:
 | Comment creation | 30 requests / hour |
 | Authenticated users | 1000 requests / hour |
 | Anonymous users | 100 requests / hour |
+
+---
+
+## Testing
+
+The project uses **pytest** and **pytest-django** with a focused API regression suite (~48 tests) covering accounts, posts, comments, direct messages, notifications, and hashtags.
+
+```bash
+cd core
+pytest
 
 ---
 

@@ -1,0 +1,13 @@
+[run]
+source = .
+omit =
+    */migrations/*
+    */tests/*
+    conftest.py
+    manage.py
+    */venv/*
+    */__pycache__/*
+
+[report]
+show_missing = True
+skip_covered = False
