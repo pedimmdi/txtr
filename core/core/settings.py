@@ -95,11 +95,13 @@ WSGI_APPLICATION = 'core.wsgi.application'
 # ---------------------------------------------------------------------------
 # Database
 # ---------------------------------------------------------------------------
+# Prefer DATABASE_URL when set (Docker / production Postgres).
+# Fall back to local SQLite for simple non-Docker development.
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': env.db(
+        'DATABASE_URL',
+        default=f'sqlite:///{BASE_DIR / "db.sqlite3"}',
+    )
 }
 
 # ---------------------------------------------------------------------------
