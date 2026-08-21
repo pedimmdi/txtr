@@ -10,6 +10,8 @@ class NotificationsConfig(AppConfig):
         from posts.models import Like, Post
         from comments.models import Comment, CommentLike
         from accounts.models import Follow
+        from notifications.models import Notification
+        from notifications.signals import notification_created_or_updated
         from notifications.signals import (
             notify_post_like,
             notify_comment_or_reply,
@@ -25,6 +27,7 @@ class NotificationsConfig(AppConfig):
         post_save.connect(notify_comment_like, sender=CommentLike)
         post_save.connect(notify_follow, sender=Follow)
         post_save.connect(notify_repost, sender=Post)
+        post_save.connect(notification_created_or_updated, sender=Notification)
 
         pre_save.connect(cache_old_content, sender=Post)
         pre_save.connect(cache_old_content, sender=Comment)

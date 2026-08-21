@@ -17,11 +17,12 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 
 django_asgi_app = get_asgi_application()
 
-from core.consumers import PingConsumer, DMConsumer  # noqa: E402
+from core.consumers import PingConsumer, DMConsumer, NotificationConsumer  # noqa: E402
 
 websocket_urlpatterns = [
     path('ws/ping/', PingConsumer.as_asgi()),
     path('ws/dm/<str:username>/', DMConsumer.as_asgi()),
+    path('ws/notifications/', NotificationConsumer.as_asgi()),
 ]
 
 application = ProtocolTypeRouter({

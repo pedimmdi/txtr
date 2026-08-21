@@ -204,7 +204,11 @@
   window.POST_ID       = {{ post.id }};
   window.IS_AUTH       = {{ request.user.is_authenticated|lower }};
   window.CURRENT_USER  = "{{ request.user.profile.username|default:'' }}";
-  window.CURRENT_AVATAR = "{{ request.user.profile.image.url|default:'' }}";
+  {% if request.user.is_authenticated and request.user.profile.image %}
+  window.CURRENT_AVATAR = "{{ request.user.profile.image.url }}";
+  {% else %}
+  window.CURRENT_AVATAR = "";
+  {% endif %}
 </script>
 <script src="{% static 'js/feed.js' %}"></script>
 <script src="{% static 'js/post_detail.js' %}"></script>

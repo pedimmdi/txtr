@@ -104,7 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-/* ── Notification Count Polling ──────────────────────────── */
+/* ── Notification badge (WebSocket + light fallback poll) ── */
 function updateNotificationBadge(count) {
   document.querySelectorAll('.notif-badge').forEach(badge => {
     if (count > 0) {
@@ -125,6 +125,41 @@ async function fetchNotificationCount() {
   } catch {
     // Silently fail — not critical
   }
+}
+
+let notifSocket = null;
+let notifSocketRetry = null;
+
+function connectNotificationSocket() {
+  if (document.body.dataset.authenticated !== 'true') return;
+
+  if (
+    notifSocket &&
+    (notifSocket.readyState === WebSocket.OPEN ||
+      notifSocket.readyState === WebSocket.CONNECTING)
+  ) {
+    return;
+  }
+
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const url = `${protocol}//${window.location.host}/ws/notifications/`;
+  notifSocket = new WebSocket(url);
+
+  notifSocket.onmessage = (event) => {
+    let payload;
+    try {
+      payload = JSON.parse(event.data);
+    } catch {
+      return;
+    }
+    if (payload.type === 'notifications.unread') {
+      updateNotificationBadge(payload.unread_count || 0);
+    }
+  };
+
+  notifSocket.onclose = () => {
+    notifSocketRetry = setTimeout(connectNotificationSocket, 4000);
+  };
 }
 
 async function fetchMessageCount() {
@@ -150,12 +185,14 @@ async function fetchMessageCount() {
   }
 }
 
-// Poll every 60 seconds if user is logged in
 document.addEventListener('DOMContentLoaded', () => {
   if (document.body.dataset.authenticated === 'true') {
+    connectNotificationSocket();
+    // Fallback if WS is unavailable
     fetchNotificationCount();
+    setInterval(fetchNotificationCount, 120000);
+
     fetchMessageCount();
-    setInterval(fetchNotificationCount, 60000);
     setInterval(fetchMessageCount, 30000);
   }
 });

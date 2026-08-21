@@ -105,3 +105,54 @@ class DMConsumer(AsyncWebsocketConsumer):
             return Profile.objects.select_related('user').get(username=username).user
         except Profile.DoesNotExist:
             return None
+
+
+def notifications_group(user_id):
+    """Personal notification channel for one user."""
+    return f'notifications_{int(user_id)}'
+
+
+class NotificationConsumer(AsyncWebsocketConsumer):
+    """
+    Pushes unread notification counts to the logged-in user.
+
+    URL: ws/notifications/
+    """
+
+    async def connect(self):
+        self.user = self.scope.get('user')
+        if self.user is None or self.user.is_anonymous:
+            await self.close()
+            return
+
+        self.group_name = notifications_group(self.user.id)
+        await self.channel_layer.group_add(self.group_name, self.channel_name)
+        await self.accept()
+
+        # Send current count immediately on connect
+        count = await self._unread_count()
+        await self.send(text_data=json.dumps({
+            'type': 'notifications.unread',
+            'unread_count': count,
+        }))
+
+    async def disconnect(self, close_code):
+        if hasattr(self, 'group_name'):
+            await self.channel_layer.group_discard(
+                self.group_name, self.channel_name
+            )
+
+    async def notifications_unread(self, event):
+        """Handles group_send type 'notifications.unread'."""
+        await self.send(text_data=json.dumps({
+            'type': 'notifications.unread',
+            'unread_count': event.get('unread_count', 0),
+        }))
+
+    @database_sync_to_async
+    def _unread_count(self):
+        from notifications.models import Notification
+        return Notification.objects.filter(
+            recipient_id=self.user.id,
+            is_read=False,
+        ).count()

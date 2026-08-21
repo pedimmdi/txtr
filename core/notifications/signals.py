@@ -147,3 +147,36 @@ def notify_mentions(sender, instance, created, **kwargs):
             post=instance if is_post else instance.post,
             comment=None if is_post else instance,
         )
+
+
+def broadcast_unread_count(recipient_id):
+    """Push latest unread notification count to the recipient's WS group."""
+    from asgiref.sync import async_to_sync
+    from channels.layers import get_channel_layer
+    from core.consumers import notifications_group
+    from notifications.models import Notification
+
+    channel_layer = get_channel_layer()
+    if channel_layer is None:
+        return
+
+    count = Notification.objects.filter(
+        recipient_id=recipient_id,
+        is_read=False,
+    ).count()
+
+    async_to_sync(channel_layer.group_send)(
+        notifications_group(recipient_id),
+        {
+            'type': 'notifications.unread',
+            'unread_count': count,
+        },
+    )
+
+
+def notification_created_or_updated(sender, instance, **kwargs):
+    """
+    After any Notification save/delete-related change, refresh badge count.
+    Wired to post_save; mark-read views also save is_read=True.
+    """
+    broadcast_unread_count(instance.recipient_id)
