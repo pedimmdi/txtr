@@ -1,16 +1,42 @@
-from rest_framework import status
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.views import APIView
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 from django.shortcuts import get_object_or_404
+from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
 from accounts.models import Profile
+from core.consumers import dm_room_name
+from core.pagination import StandardResultsSetPagination
 from direct_messages.models import Conversation, Message
 from .serializers import ConversationSerializer, MessageSerializer
-from core.pagination import StandardResultsSetPagination
+
+
+def broadcast_dm_message(user_a_id, user_b_id, serialized_message):
+    """
+    Push a serialized message to the shared DM room so open WebSocket
+    clients receive it without polling.
+    """
+    channel_layer = get_channel_layer()
+    if channel_layer is None:
+        return
+    room = dm_room_name(user_a_id, user_b_id)
+    async_to_sync(channel_layer.group_send)(
+        room,
+        {
+            'type': 'chat.message',
+            'message': {
+                'type': 'chat.message',
+                'message': serialized_message,
+            },
+        },
+    )
 
 
 class ConversationListView(APIView):
     """GET: list all conversations for the current user."""
+
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -30,6 +56,7 @@ class ConversationDetailView(APIView):
     POST: send a message to a specific user.
           Creates the conversation if it doesn't exist yet.
     """
+
     permission_classes = [IsAuthenticated]
 
     def get_or_create_conversation(self, request, username):
@@ -38,9 +65,9 @@ class ConversationDetailView(APIView):
         other_user = profile.user
 
         if other_user == request.user:
-            return None, Response(
+            return None, None, Response(
                 {'error': 'You cannot message yourself'},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         existing = Conversation.objects.filter(
@@ -50,14 +77,16 @@ class ConversationDetailView(APIView):
         ).first()
 
         if existing:
-            return existing, None
+            return existing, other_user, None
 
         conversation = Conversation.objects.create()
         conversation.participants.add(request.user, other_user)
-        return conversation, None
+        return conversation, other_user, None
 
     def get(self, request, username):
-        conversation, error = self.get_or_create_conversation(request, username)
+        conversation, other_user, error = self.get_or_create_conversation(
+            request, username
+        )
         if error:
             return error
 
@@ -77,14 +106,17 @@ class ConversationDetailView(APIView):
             'forwarded_post__original_post',
             'forwarded_post__original_post__author__profile',
         )
-
         paginator = StandardResultsSetPagination()
         page = paginator.paginate_queryset(messages, request)
-        serializer = MessageSerializer(page, many=True, context={'request': request})
+        serializer = MessageSerializer(
+            page, many=True, context={'request': request}
+        )
         return paginator.get_paginated_response(serializer.data)
 
     def post(self, request, username):
-        conversation, error = self.get_or_create_conversation(request, username)
+        conversation, other_user, error = self.get_or_create_conversation(
+            request, username
+        )
         if error:
             return error
 
@@ -100,31 +132,35 @@ class ConversationDetailView(APIView):
             try:
                 reply_to = Message.objects.get(
                     pk=int(reply_to_id),
-                    conversation=conversation
+                    conversation=conversation,
                 )
             except (Message.DoesNotExist, TypeError, ValueError):
                 return Response(
                     {'error': 'reply_to message not found in this conversation'},
-                    status=status.HTTP_400_BAD_REQUEST
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
 
         forwarded_post = None
         if forwarded_post_id:
             from posts.models import Post
+
             try:
                 forwarded_post = Post.objects.select_related(
-                    'author', 'author__profile', 'original_post', 'original_post__author__profile'
+                    'author',
+                    'author__profile',
+                    'original_post',
+                    'original_post__author__profile',
                 ).get(pk=int(forwarded_post_id))
             except (Post.DoesNotExist, TypeError, ValueError):
                 return Response(
                     {'error': 'forwarded_post not found'},
-                    status=status.HTTP_400_BAD_REQUEST
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
 
         if not content and not forwarded_post:
             return Response(
                 {'error': 'content or forwarded_post is required'},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         message = Message.objects.create(
@@ -138,40 +174,41 @@ class ConversationDetailView(APIView):
         conversation.save()
 
         serializer = MessageSerializer(message, context={'request': request})
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        data = serializer.data
+
+        # Realtime: notify both open sockets in this DM room
+        broadcast_dm_message(request.user.id, other_user.id, data)
+
+        return Response(data, status=status.HTTP_201_CREATED)
 
 
 class MessageDeleteView(APIView):
     """DELETE a message — only the sender can delete."""
+
     permission_classes = [IsAuthenticated]
 
     def delete(self, request, username, pk):
         profile = get_object_or_404(Profile, username=username)
         other_user = profile.user
-
         conversation = Conversation.objects.filter(
             participants=request.user
         ).filter(
             participants=other_user
         ).first()
-
         if not conversation:
             return Response(
                 {'error': 'Conversation not found'},
-                status=status.HTTP_404_NOT_FOUND
+                status=status.HTTP_404_NOT_FOUND,
             )
-
         message = get_object_or_404(
             Message,
             pk=pk,
-            conversation=conversation
+            conversation=conversation,
         )
-
         if message.sender != request.user:
             return Response(
                 {'error': 'You can only delete your own messages'},
-                status=status.HTTP_403_FORBIDDEN
+                status=status.HTTP_403_FORBIDDEN,
             )
-
         message.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)

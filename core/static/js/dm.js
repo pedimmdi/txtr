@@ -508,13 +508,76 @@ function highlightMessage(msgId) {
   setTimeout(() => el.classList.remove('msg-highlight'), 1400);
 }
 
-// function attachQuoteJump(root = document) {
-//   root.querySelectorAll('.msg-reply-quote[data-reply-to]').forEach(quote => {
-//     if (quote._jumpAttached) return;
-//     quote._jumpAttached = true;
-//     quote.addEventListener('click', e => {
-//       e.stopPropagation();
-//       highlightMessage(quote.dataset.replyTo);
-//     });
-//   });
-// }
+/* ── WebSocket realtime ──────────────────────────────────── */
+let dmSocket = null;
+let dmSocketRetry = null;
+
+function connectDMSocket() {
+  if (!OTHER_USER || !messagesArea) return;
+
+  // Avoid duplicate sockets on hot reload
+  if (dmSocket && (dmSocket.readyState === WebSocket.OPEN ||
+                   dmSocket.readyState === WebSocket.CONNECTING)) {
+    return;
+  }
+
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const url = `${protocol}//${window.location.host}/ws/dm/${encodeURIComponent(OTHER_USER)}/`;
+
+  dmSocket = new WebSocket(url);
+
+  dmSocket.onopen = () => {
+    if (dmSocketRetry) {
+      clearTimeout(dmSocketRetry);
+      dmSocketRetry = null;
+    }
+  };
+
+  dmSocket.onmessage = (event) => {
+    let payload;
+    try {
+      payload = JSON.parse(event.data);
+    } catch {
+      return;
+    }
+
+    if (payload.type !== 'chat.message' || !payload.message) return;
+
+    const msg = payload.message;
+    if (!msg.id) return;
+
+    if (msg.sender_username === ME) {
+      const ownId = parseInt(msg.id, 10);
+      if (!Number.isNaN(ownId) && ownId > lastMsgId) lastMsgId = ownId;
+      return;
+    }
+
+    if (document.getElementById(`msg-${msg.id}`)) {
+      const realId = parseInt(msg.id, 10);
+      if (!Number.isNaN(realId) && realId > lastMsgId) lastMsgId = realId;
+      return;
+    }
+
+    messagesArea.insertAdjacentHTML('beforeend', buildBubble(msg, false));
+
+    const realId = parseInt(msg.id, 10);
+    if (!Number.isNaN(realId) && realId > lastMsgId) lastMsgId = realId;
+
+    scrollToBottom();
+  };
+
+  dmSocket.onclose = () => {
+    // Reconnect after a short delay if still on the conversation page
+    if (!messagesArea) return;
+    dmSocketRetry = setTimeout(connectDMSocket, 3000);
+  };
+
+  dmSocket.onerror = () => {
+    // onclose will handle retry
+  };
+}
+
+// Start socket when conversation page is active
+if (messagesArea && OTHER_USER) {
+  connectDMSocket();
+}

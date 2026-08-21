@@ -40,6 +40,7 @@ ALLOWED_HOSTS = env('ALLOWED_HOSTS')
 # Application definition
 # ---------------------------------------------------------------------------
 INSTALLED_APPS = [
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -48,6 +49,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.humanize',
     # Third-party
+    'channels',
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',
     'django_filters',
@@ -91,6 +93,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'core.wsgi.application'
+ASGI_APPLICATION = 'core.asgi.application'
 
 # ---------------------------------------------------------------------------
 # Database
@@ -208,5 +211,25 @@ else:
         'default': {
             'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
             'LOCATION': 'txtr-local',
+        }
+    }
+
+# ---------------------------------------------------------------------------
+# Django Channels
+# ---------------------------------------------------------------------------
+if REDIS_URL:
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels_redis.core.RedisChannelLayer',
+            'CONFIG': {
+                'hosts': [REDIS_URL],
+            },
+        }
+    }
+else:
+    # In-memory layer for local tests without Redis (not for multi-process)
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels.layers.InMemoryChannelLayer',
         }
     }
