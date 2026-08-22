@@ -6,6 +6,7 @@ from rest_framework.permissions import (
     IsAuthenticatedOrReadOnly, IsAuthenticated
 )
 from django.shortcuts import get_object_or_404
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiResponse, OpenApiExample
 from posts.models import Post
 from comments.models import Comment, CommentLike
 from comments.permissions import IsAuthorOrReadOnly
@@ -30,6 +31,20 @@ def get_annotated_comments(user):
     return qs.order_by('created_date', 'id')
 
 
+@extend_schema_view(
+    get=extend_schema(
+        tags=['Comments'],
+        summary='List top-level comments of a post',
+        description='Paginated list of top-level comments (parent=None) for the given post.',
+    ),
+    post=extend_schema(
+        tags=['Comments'],
+        summary='Create a comment on a post',
+        description='Create a new top-level comment. Requires authentication.',
+        request=CommentSerializer,
+        responses={201: CommentSerializer},
+    ),
+)
 class CommentListCreateView(generics.ListCreateAPIView):
     """
     GET: top-level comments for a post (parent=None).
@@ -58,6 +73,12 @@ class CommentListCreateView(generics.ListCreateAPIView):
         serializer.save(author=self.request.user, post=post)
 
 
+@extend_schema_view(
+    get=extend_schema(tags=['Comments'], summary='Retrieve a comment'),
+    put=extend_schema(tags=['Comments'], summary='Update a comment (author only)'),
+    patch=extend_schema(tags=['Comments'], summary='Partial update a comment (author only)'),
+    delete=extend_schema(tags=['Comments'], summary='Delete a comment (author only)'),
+)
 class CommentDetailView(generics.RetrieveUpdateDestroyAPIView):
     """GET for anyone; PUT/PATCH/DELETE only for the comment's author."""
     serializer_class = CommentSerializer
@@ -69,6 +90,20 @@ class CommentDetailView(generics.RetrieveUpdateDestroyAPIView):
         )
 
 
+@extend_schema_view(
+    get=extend_schema(
+        tags=['Comments'],
+        summary='List replies to a comment',
+        description='Paginated list of replies to a top-level comment.',
+    ),
+    post=extend_schema(
+        tags=['Comments'],
+        summary='Reply to a comment',
+        description='Create a reply. Only allowed on top-level comments (one level of nesting).',
+        request=CommentSerializer,
+        responses={201: CommentSerializer},
+    ),
+)
 class ReplyListCreateView(generics.ListCreateAPIView):
     """
     GET: replies for a specific comment.
@@ -111,6 +146,19 @@ class CommentLikeToggleView(APIView):
     permission_classes = [IsAuthenticated]
     throttle_classes = [LikeRateThrottle]
 
+    @extend_schema(
+        tags=['Comments'],
+        summary='Like / Unlike a comment',
+        description='Toggle like on a comment. Returns the new state.',
+        responses={
+            201: OpenApiResponse(description='Liked', examples=[
+                OpenApiExample('Liked', value={'is_liked': True}),
+            ]),
+            200: OpenApiResponse(description='Unliked', examples=[
+                OpenApiExample('Unliked', value={'is_liked': False}),
+            ]),
+        },
+    )
     def post(self, request, post_pk, pk):
         comment = get_object_or_404(Comment, pk=pk, post_id=post_pk)
         like, created = CommentLike.objects.get_or_create(

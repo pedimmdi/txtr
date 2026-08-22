@@ -3,11 +3,19 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiResponse, OpenApiExample
 from notifications.models import Notification
 from .serializers import NotificationSerializer
 from core.pagination import StandardResultsSetPagination
 
 
+@extend_schema_view(
+    get=extend_schema(
+        tags=['Notifications'],
+        summary='List my notifications',
+        description='Paginated list of notifications for the authenticated user (newest first).',
+    )
+)
 class NotificationListView(generics.ListAPIView):
     """List all notifications for the authenticated user (unread first)."""
     serializer_class = NotificationSerializer
@@ -26,6 +34,17 @@ class NotificationUnreadCountView(APIView):
     """Return count of unread notifications."""
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        tags=['Notifications'],
+        summary='Unread notification count',
+        description='Returns the number of unread notifications. Also pushed live via WebSocket.',
+        responses={
+            200: OpenApiResponse(
+                description='Unread count',
+                examples=[OpenApiExample('Count', value={'unread_count': 3})],
+            ),
+        },
+    )
     def get(self, request):
         count = Notification.objects.filter(
             recipient=request.user,
@@ -38,6 +57,16 @@ class NotificationMarkReadView(APIView):
     """Mark a single notification as read."""
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        tags=['Notifications'],
+        summary='Mark one notification as read',
+        responses={
+            200: OpenApiResponse(
+                description='Marked as read',
+                examples=[OpenApiExample('Read', value={'is_read': True})],
+            ),
+        },
+    )
     def post(self, request, pk):
         notification = get_object_or_404(
             Notification,
@@ -53,6 +82,16 @@ class NotificationMarkAllReadView(APIView):
     """Mark all notifications as read."""
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        tags=['Notifications'],
+        summary='Mark all notifications as read',
+        responses={
+            200: OpenApiResponse(
+                description='All marked as read',
+                examples=[OpenApiExample('All read', value={'status': 'all notifications marked as read'})],
+            ),
+        },
+    )
     def post(self, request):
         Notification.objects.filter(
             recipient=request.user,

@@ -2,6 +2,7 @@ from django.db.models import Count
 from rest_framework import generics
 from rest_framework.permissions import AllowAny
 from django.shortcuts import get_object_or_404
+from drf_spectacular.utils import extend_schema, extend_schema_view
 from hashtags.models import Hashtag
 from hashtags.api.v1.serializers import HashtagSerializer
 from posts.api.v1.views import get_annotated_posts
@@ -9,6 +10,13 @@ from posts.api.v1.serializers import PostSerializer
 from core.pagination import StandardResultsSetPagination
 
 
+@extend_schema_view(
+    get=extend_schema(
+        tags=['Hashtags'],
+        summary='List hashtags (trending)',
+        description='List all hashtags ordered by number of posts (most used first).',
+    )
+)
 class HashtagListView(generics.ListAPIView):
     """
     List all hashtags ordered by post count (trending first).
@@ -23,6 +31,13 @@ class HashtagListView(generics.ListAPIView):
         ).order_by('-posts_count')
 
 
+@extend_schema_view(
+    get=extend_schema(
+        tags=['Hashtags'],
+        summary='List posts for a hashtag',
+        description='Paginated list of posts tagged with the given hashtag name.',
+    )
+)
 class HashtagPostsView(generics.ListAPIView):
     """
     List all posts tagged with a specific hashtag.

@@ -5,6 +5,7 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiExample
 
 from accounts.models import Profile
 from core.consumers import dm_room_name
@@ -39,6 +40,12 @@ class ConversationListView(APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        tags=['Direct Messages'],
+        summary='List my conversations',
+        description='Returns all conversations the authenticated user participates in.',
+        responses={200: ConversationSerializer(many=True)},
+    )
     def get(self, request):
         conversations = Conversation.objects.filter(
             participants=request.user
@@ -83,6 +90,16 @@ class ConversationDetailView(APIView):
         conversation.participants.add(request.user, other_user)
         return conversation, other_user, None
 
+    @extend_schema(
+        tags=['Direct Messages'],
+        summary='Get conversation messages',
+        description=(
+            'Paginated messages with the given username. '
+            'Creates the conversation if it does not exist. '
+            'Marks incoming messages as read.'
+        ),
+        responses={200: MessageSerializer(many=True)},
+    )
     def get(self, request, username):
         conversation, other_user, error = self.get_or_create_conversation(
             request, username
@@ -113,6 +130,29 @@ class ConversationDetailView(APIView):
         )
         return paginator.get_paginated_response(serializer.data)
 
+    @extend_schema(
+        tags=['Direct Messages'],
+        summary='Send a direct message',
+        description=(
+            'Send a message to the given username. '
+            'Supports plain text, reply_to (message id) and forwarded_post (post id). '
+            'Message is also pushed live via WebSocket.'
+        ),
+        request={
+            'application/json': {
+                'type': 'object',
+                'properties': {
+                    'content': {'type': 'string', 'description': 'Message text'},
+                    'reply_to': {'type': 'integer', 'description': 'ID of message being replied to'},
+                    'forwarded_post': {'type': 'integer', 'description': 'ID of post to forward'},
+                },
+            }
+        },
+        responses={
+            201: MessageSerializer,
+            400: OpenApiResponse(description='Validation error'),
+        },
+    )
     def post(self, request, username):
         conversation, other_user, error = self.get_or_create_conversation(
             request, username
@@ -187,6 +227,16 @@ class MessageDeleteView(APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        tags=['Direct Messages'],
+        summary='Delete a message',
+        description='Delete a message. Only the sender can delete their own messages.',
+        responses={
+            204: OpenApiResponse(description='Message deleted'),
+            403: OpenApiResponse(description='Not the sender'),
+            404: OpenApiResponse(description='Conversation or message not found'),
+        },
+    )
     def delete(self, request, username, pk):
         profile = get_object_or_404(Profile, username=username)
         other_user = profile.user
