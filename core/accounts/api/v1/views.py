@@ -6,6 +6,7 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.shortcuts import get_object_or_404
 from rest_framework_simplejwt.views import TokenObtainPairView
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiResponse, OpenApiExample
 from accounts.models import Profile, Follow
 from accounts.permissions import OnlyAnonymousUsers
 from .serializers import (
@@ -22,8 +23,18 @@ class UserRegisterView(APIView):
     """
     throttle_classes = [AuthRateThrottle]
     serializer_class = UserSerializer
-    # Only guest users can register. Logged-in users are blocked to prevent duplicate accounts.
     permission_classes = [OnlyAnonymousUsers]
+
+    @extend_schema(
+        tags=['Auth'],
+        summary='Register a new user',
+        description='Create a new account with email and password. Only available to anonymous users.',
+        request=UserSerializer,
+        responses={
+            201: OpenApiResponse(response=UserSerializer, description='User created successfully'),
+            400: OpenApiResponse(description='Validation error'),
+        },
+    )
     def post(self, request):
         serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -37,10 +48,25 @@ class UserProfileView(APIView):
     """
     serializer_class = ProfileSerializer
     permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        tags=['Accounts'],
+        summary='Get my profile',
+        description='Retrieve the profile of the currently authenticated user.',
+        responses={200: ProfileSerializer},
+    )
     def get(self, request):
         profile = request.user.profile
         serializer = self.serializer_class(profile)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @extend_schema(
+        tags=['Accounts'],
+        summary='Update my profile',
+        description='Update username, bio, image or birth_date of the authenticated user.',
+        request=ProfileSerializer,
+        responses={200: ProfileSerializer},
+    )
     def put(self, request):
         profile = request.user.profile
         serializer = self.serializer_class(profile, data=request.data, partial=True)
@@ -57,6 +83,13 @@ class UserUpdateView(APIView):
     serializer_class = UserUpdateSerializer
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        tags=['Accounts'],
+        summary='Update email or password',
+        description='Update the authenticated user\'s email and/or password.',
+        request=UserUpdateSerializer,
+        responses={200: UserUpdateSerializer},
+    )
     def put(self, request):
         user = request.user
         serializer = self.serializer_class(user, data=request.data, partial=True)
@@ -70,6 +103,13 @@ class PublicProfileView(APIView):
     View for viewing other users' profiles by username
     """
     permission_classes = [AllowAny]
+
+    @extend_schema(
+        tags=['Accounts'],
+        summary='Get public profile by username',
+        description='Retrieve a public profile including follower/following counts and is_following status.',
+        responses={200: PublicProfileSerializer, 404: OpenApiResponse(description='User not found')},
+    )
     def get(self, request, username):
         profile = get_object_or_404(Profile, username=username)
         serializer = PublicProfileSerializer(profile, context={'request': request})
@@ -83,6 +123,15 @@ class CustomUserLoginView(TokenObtainPairView):
     throttle_classes = [AuthRateThrottle]
     serializer_class = CustomTokenObtainPairSerializer
 
+    @extend_schema(
+        tags=['Auth'],
+        summary='Login (JWT)',
+        description='Obtain access and refresh tokens. Also returns basic user profile data.',
+        responses={200: OpenApiResponse(description='Tokens + user data')},
+    )
+    def post(self, request, *args, **kwargs):
+        return super().post(request, *args, **kwargs)
+
 
 class UserLogoutView(APIView):
     """
@@ -90,6 +139,24 @@ class UserLogoutView(APIView):
     """
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        tags=['Auth'],
+        summary='Logout (blacklist refresh token)',
+        description='Blacklist the provided refresh token so it can no longer be used.',
+        request={
+            'application/json': {
+                'type': 'object',
+                'properties': {
+                    'refresh': {'type': 'string', 'description': 'Refresh token to blacklist'},
+                },
+                'required': ['refresh'],
+            }
+        },
+        responses={
+            205: OpenApiResponse(description='Successfully logged out'),
+            400: OpenApiResponse(description='Missing or invalid refresh token'),
+        },
+    )
     def post(self, request):
         refresh_token = request.data.get('refresh') or request.data.get('refresh_token')
         if not refresh_token:
@@ -115,6 +182,20 @@ class FollowToggleView(APIView):
     throttle_classes = [FollowRateThrottle]
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        tags=['Social'],
+        summary='Follow / Unfollow a user',
+        description='Toggle follow status for the given username. Returns the new state.',
+        responses={
+            201: OpenApiResponse(description='Now following', examples=[
+                OpenApiExample('Following', value={'is_following': True}),
+            ]),
+            200: OpenApiResponse(description='Unfollowed', examples=[
+                OpenApiExample('Not following', value={'is_following': False}),
+            ]),
+            400: OpenApiResponse(description='Cannot follow yourself'),
+        },
+    )
     def post(self, request, username):
         profile = get_object_or_404(Profile, username=username)
         target_user = profile.user
@@ -137,6 +218,13 @@ class FollowToggleView(APIView):
         return Response({"is_following": True}, status=status.HTTP_201_CREATED)
 
 
+@extend_schema_view(
+    get=extend_schema(
+        tags=['Social'],
+        summary='List followers of a user',
+        description='Paginated list of users who follow the given username.',
+    )
+)
 class FollowersListView(generics.ListAPIView):
     """
     List of users who follow the given username.
@@ -144,7 +232,7 @@ class FollowersListView(generics.ListAPIView):
     serializer_class = PublicProfileSerializer
     permission_classes = [AllowAny]
     pagination_class = StandardResultsSetPagination
-    
+
     def get_queryset(self):
         profile = get_object_or_404(Profile, username=self.kwargs['username'])
         follower_ids = profile.user.followers.values_list('follower_id', flat=True)
@@ -154,6 +242,13 @@ class FollowersListView(generics.ListAPIView):
         return {'request': self.request}
 
 
+@extend_schema_view(
+    get=extend_schema(
+        tags=['Social'],
+        summary='List users that a user is following',
+        description='Paginated list of users that the given username follows.',
+    )
+)
 class FollowingListView(generics.ListAPIView):
     """
     List of users that the given username follows.
@@ -161,7 +256,7 @@ class FollowingListView(generics.ListAPIView):
     serializer_class = PublicProfileSerializer
     permission_classes = [AllowAny]
     pagination_class = StandardResultsSetPagination
-    
+
     def get_queryset(self):
         profile = get_object_or_404(Profile, username=self.kwargs['username'])
         following_ids = profile.user.following.values_list('following_id', flat=True)
@@ -171,6 +266,13 @@ class FollowingListView(generics.ListAPIView):
         return {'request': self.request}
 
 
+@extend_schema_view(
+    get=extend_schema(
+        tags=['Accounts'],
+        summary='Search users',
+        description='Search public profiles by username (supports ?search= and pagination).',
+    )
+)
 class UserSearchView(generics.ListAPIView):
     """Search users by username."""
     serializer_class = PublicProfileSerializer

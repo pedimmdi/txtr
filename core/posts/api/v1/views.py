@@ -6,6 +6,7 @@ from rest_framework.permissions import (
     IsAuthenticatedOrReadOnly, AllowAny, IsAuthenticated
 )
 from django.shortcuts import get_object_or_404
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiResponse, OpenApiExample
 from accounts.models import Profile, Follow
 from posts.models import Post, Like, Bookmark
 from posts.permissions import IsAuthorOrReadOnly
@@ -40,6 +41,20 @@ def get_annotated_posts(user):
     return qs
 
 
+@extend_schema_view(
+    get=extend_schema(
+        tags=['Posts'],
+        summary='List all posts',
+        description='Public paginated list of posts. Supports ?search= and ?ordering=.',
+    ),
+    post=extend_schema(
+        tags=['Posts'],
+        summary='Create a new post',
+        description='Create a text-only post (max 1000 characters). Requires authentication.',
+        request=PostSerializer,
+        responses={201: PostSerializer},
+    ),
+)
 class PostListCreateView(generics.ListCreateAPIView):
     """GET: public list of all posts. POST: create a post as request.user."""
     serializer_class = PostSerializer
@@ -52,10 +67,6 @@ class PostListCreateView(generics.ListCreateAPIView):
         return get_annotated_posts(self.request.user)
 
     def get_throttles(self):
-        """
-        GET requests use default global throttle.
-        POST requests use stricter PostCreateRateThrottle.
-        """
         if self.request.method == 'POST':
             return [PostCreateRateThrottle()]
         return super().get_throttles()
@@ -64,6 +75,12 @@ class PostListCreateView(generics.ListCreateAPIView):
         serializer.save(author=self.request.user)
 
 
+@extend_schema_view(
+    get=extend_schema(tags=['Posts'], summary='Retrieve a post'),
+    put=extend_schema(tags=['Posts'], summary='Update a post (author only)'),
+    patch=extend_schema(tags=['Posts'], summary='Partial update a post (author only)'),
+    delete=extend_schema(tags=['Posts'], summary='Delete a post (author only)'),
+)
 class PostDetailView(generics.RetrieveUpdateDestroyAPIView):
     """GET for anyone; PUT/PATCH/DELETE only for the post's author."""
     serializer_class = PostSerializer
@@ -73,6 +90,13 @@ class PostDetailView(generics.RetrieveUpdateDestroyAPIView):
         return get_annotated_posts(self.request.user)
 
 
+@extend_schema_view(
+    get=extend_schema(
+        tags=['Posts'],
+        summary='List posts by username',
+        description='Public timeline of a specific user.',
+    )
+)
 class UserPostsListView(generics.ListAPIView):
     """Public timeline of one specific username."""
     serializer_class = PostSerializer
@@ -80,12 +104,19 @@ class UserPostsListView(generics.ListAPIView):
     pagination_class = StandardResultsSetPagination
     search_fields = ['content']
     ordering_fields = ['created_date', 'likes_count']
-    
+
     def get_queryset(self):
         profile = get_object_or_404(Profile, username=self.kwargs['username'])
         return get_annotated_posts(self.request.user).filter(author=profile.user)
 
 
+@extend_schema_view(
+    get=extend_schema(
+        tags=['Posts'],
+        summary='Home feed',
+        description='Authenticated user\'s feed: own posts + posts from followed users.',
+    )
+)
 class FeedView(generics.ListAPIView):
     """Authenticated user's home feed: own posts + posts from followed users."""
     serializer_class = PostSerializer
@@ -108,6 +139,19 @@ class LikeToggleView(APIView):
     permission_classes = [IsAuthenticated]
     throttle_classes = [LikeRateThrottle]
 
+    @extend_schema(
+        tags=['Posts'],
+        summary='Like / Unlike a post',
+        description='Toggle like on a post. Returns the new state.',
+        responses={
+            201: OpenApiResponse(description='Liked', examples=[
+                OpenApiExample('Liked', value={'is_liked': True}),
+            ]),
+            200: OpenApiResponse(description='Unliked', examples=[
+                OpenApiExample('Unliked', value={'is_liked': False}),
+            ]),
+        },
+    )
     def post(self, request, pk):
         post = get_object_or_404(Post, pk=pk)
         like, created = Like.objects.get_or_create(user=request.user, post=post)
@@ -123,6 +167,19 @@ class BookmarkToggleView(APIView):
     """POST to bookmark, POST again to remove bookmark."""
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        tags=['Posts'],
+        summary='Bookmark / Unbookmark a post',
+        description='Toggle bookmark on a post.',
+        responses={
+            201: OpenApiResponse(description='Bookmarked', examples=[
+                OpenApiExample('Bookmarked', value={'is_bookmarked': True}),
+            ]),
+            200: OpenApiResponse(description='Removed', examples=[
+                OpenApiExample('Removed', value={'is_bookmarked': False}),
+            ]),
+        },
+    )
     def post(self, request, pk):
         post = get_object_or_404(Post, pk=pk)
         bookmark, created = Bookmark.objects.get_or_create(
@@ -137,6 +194,13 @@ class BookmarkToggleView(APIView):
         return Response({'is_bookmarked': True}, status=status.HTTP_201_CREATED)
 
 
+@extend_schema_view(
+    get=extend_schema(
+        tags=['Posts'],
+        summary='List my bookmarked posts',
+        description='Paginated list of posts bookmarked by the authenticated user.',
+    )
+)
 class BookmarkListView(generics.ListAPIView):
     """List all posts bookmarked by the authenticated user."""
     serializer_class = PostSerializer
@@ -161,6 +225,20 @@ class RepostToggleView(APIView):
     """
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        tags=['Posts'],
+        summary='Repost / Undo repost',
+        description='Toggle pure repost of an original post. Cannot repost your own post or a repost.',
+        responses={
+            201: OpenApiResponse(description='Reposted', examples=[
+                OpenApiExample('Reposted', value={'is_reposted': True}),
+            ]),
+            200: OpenApiResponse(description='Undo', examples=[
+                OpenApiExample('Undo', value={'is_reposted': False}),
+            ]),
+            400: OpenApiResponse(description='Cannot repost own post or invalid target'),
+        },
+    )
     def post(self, request, pk):
         original_post = get_object_or_404(Post, pk=pk, original_post=None)
 
@@ -194,6 +272,24 @@ class QuoteRepostView(APIView):
     """
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        tags=['Posts'],
+        summary='Quote repost',
+        description='Create a quote repost (new post with content that references an original post).',
+        request={
+            'application/json': {
+                'type': 'object',
+                'properties': {
+                    'content': {'type': 'string', 'description': 'Your quote text (required)'},
+                },
+                'required': ['content'],
+            }
+        },
+        responses={
+            201: PostSerializer,
+            400: OpenApiResponse(description='Content is required'),
+        },
+    )
     def post(self, request, pk):
         original_post = get_object_or_404(Post, pk=pk, original_post=None)
         content = request.data.get('content', '').strip()
