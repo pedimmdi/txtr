@@ -1,7 +1,8 @@
 from rest_framework import serializers
+from drf_spectacular.utils import extend_schema_field
+from drf_spectacular.types import OpenApiTypes
 from accounts.models import Profile
 from direct_messages.models import Conversation, Message
-from posts.models import Post
 
 
 class MessageSerializer(serializers.ModelSerializer):
@@ -50,6 +51,16 @@ class MessageSerializer(serializers.ModelSerializer):
             'forwarded_post',
         ]
 
+    @extend_schema_field({
+        'type': 'object',
+        'nullable': True,
+        'properties': {
+            'id': {'type': 'integer'},
+            'content': {'type': 'string'},
+            'sender_username': {'type': 'string'},
+            'has_forwarded_post': {'type': 'boolean'},
+        },
+    })
     def get_reply_to(self, obj):
         if not obj.reply_to_id:
             return None
@@ -63,11 +74,21 @@ class MessageSerializer(serializers.ModelSerializer):
             'has_forwarded_post': parent.forwarded_post_id is not None,
         }
 
+    @extend_schema_field({
+        'type': 'object',
+        'nullable': True,
+        'properties': {
+            'id': {'type': 'integer'},
+            'content': {'type': 'string'},
+            'author_username': {'type': 'string'},
+            'author_image': {'type': 'string', 'nullable': True},
+            'url': {'type': 'string'},
+        },
+    })
     def get_forwarded_post(self, obj):
         post = obj.forwarded_post
         if not post:
             return None
-        # If this is a pure repost wrapper, show the original content
         display = post.original_post if (post.original_post_id and not post.content) else post
         author = display.author.profile
         request = self.context.get('request')
@@ -95,6 +116,14 @@ class ConversationSerializer(serializers.ModelSerializer):
         model = Conversation
         fields = ['id', 'other_user', 'last_message', 'unread_count', 'updated_at']
 
+    @extend_schema_field({
+        'type': 'object',
+        'nullable': True,
+        'properties': {
+            'username': {'type': 'string'},
+            'image': {'type': 'string', 'nullable': True},
+        },
+    })
     def get_other_user(self, obj):
         request = self.context.get('request')
         other = obj.participants.exclude(id=request.user.id).first()
@@ -109,6 +138,14 @@ class ConversationSerializer(serializers.ModelSerializer):
         except Profile.DoesNotExist:
             return None
 
+    @extend_schema_field({
+        'type': 'object',
+        'nullable': True,
+        'properties': {
+            'content': {'type': 'string'},
+            'created_at': {'type': 'string', 'format': 'date-time'},
+        },
+    })
     def get_last_message(self, obj):
         last = obj.messages.last()
         if not last:
@@ -121,6 +158,7 @@ class ConversationSerializer(serializers.ModelSerializer):
             'created_at': last.created_at
         }
 
+    @extend_schema_field(OpenApiTypes.INT)
     def get_unread_count(self, obj):
         request = self.context.get('request')
         return obj.messages.filter(

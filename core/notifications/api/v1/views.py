@@ -7,6 +7,7 @@ from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiResp
 from notifications.models import Notification
 from .serializers import NotificationSerializer
 from core.pagination import StandardResultsSetPagination
+from core.serializers import ToggleStateSerializer
 
 
 @extend_schema_view(
@@ -56,6 +57,7 @@ class NotificationUnreadCountView(APIView):
 class NotificationMarkReadView(APIView):
     """Mark a single notification as read."""
     permission_classes = [IsAuthenticated]
+    serializer_class = ToggleStateSerializer
 
     @extend_schema(
         tags=['Notifications'],
@@ -81,6 +83,7 @@ class NotificationMarkReadView(APIView):
 class NotificationMarkAllReadView(APIView):
     """Mark all notifications as read."""
     permission_classes = [IsAuthenticated]
+    serializer_class = ToggleStateSerializer
 
     @extend_schema(
         tags=['Notifications'],

@@ -13,6 +13,7 @@ from comments.permissions import IsAuthorOrReadOnly
 from .serializers import CommentSerializer
 from core.throttles import CommentCreateRateThrottle, LikeRateThrottle
 from core.pagination import StandardResultsSetPagination
+from core.serializers import ToggleStateSerializer
 
 
 def get_annotated_comments(user):
@@ -57,6 +58,8 @@ class CommentListCreateView(generics.ListCreateAPIView):
     ordering_fields = ['created_date', 'likes_count']
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Comment.objects.none()
         post = get_object_or_404(Post, pk=self.kwargs['post_pk'])
         return get_annotated_comments(self.request.user).filter(
             post=post,
@@ -85,6 +88,8 @@ class CommentDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAuthenticatedOrReadOnly, IsAuthorOrReadOnly]
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Comment.objects.none()
         return get_annotated_comments(self.request.user).filter(
             post_id=self.kwargs['post_pk']
         )
@@ -114,6 +119,8 @@ class ReplyListCreateView(generics.ListCreateAPIView):
     pagination_class = StandardResultsSetPagination
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Comment.objects.none()
         parent = get_object_or_404(
             Comment,
             pk=self.kwargs['pk'],
@@ -145,6 +152,7 @@ class CommentLikeToggleView(APIView):
     """POST to like, POST again to unlike."""
     permission_classes = [IsAuthenticated]
     throttle_classes = [LikeRateThrottle]
+    serializer_class = ToggleStateSerializer
 
     @extend_schema(
         tags=['Comments'],

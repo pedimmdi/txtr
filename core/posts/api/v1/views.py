@@ -13,6 +13,7 @@ from posts.permissions import IsAuthorOrReadOnly
 from core.throttles import PostCreateRateThrottle, LikeRateThrottle
 from .serializers import PostSerializer
 from core.pagination import StandardResultsSetPagination
+from core.serializers import ToggleStateSerializer
 
 
 def get_annotated_posts(user):
@@ -106,6 +107,8 @@ class UserPostsListView(generics.ListAPIView):
     ordering_fields = ['created_date', 'likes_count']
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Post.objects.none()
         profile = get_object_or_404(Profile, username=self.kwargs['username'])
         return get_annotated_posts(self.request.user).filter(author=profile.user)
 
@@ -138,6 +141,7 @@ class LikeToggleView(APIView):
     """POST to like, POST again to unlike"""
     permission_classes = [IsAuthenticated]
     throttle_classes = [LikeRateThrottle]
+    serializer_class = ToggleStateSerializer
 
     @extend_schema(
         tags=['Posts'],
@@ -166,6 +170,7 @@ class LikeToggleView(APIView):
 class BookmarkToggleView(APIView):
     """POST to bookmark, POST again to remove bookmark."""
     permission_classes = [IsAuthenticated]
+    serializer_class = ToggleStateSerializer
 
     @extend_schema(
         tags=['Posts'],
@@ -224,6 +229,7 @@ class RepostToggleView(APIView):
     Only original posts can be reposted (no repost of a repost).
     """
     permission_classes = [IsAuthenticated]
+    serializer_class = ToggleStateSerializer
 
     @extend_schema(
         tags=['Posts'],

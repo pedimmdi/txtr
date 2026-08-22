@@ -1,4 +1,6 @@
 from rest_framework import serializers
+from drf_spectacular.utils import extend_schema_field
+from drf_spectacular.types import OpenApiTypes
 from accounts.models import Profile
 from posts.models import Post
 
@@ -38,15 +40,17 @@ class PostSerializer(serializers.ModelSerializer):
             'id', 'author', 'content', 'original_post', 'hashtags',
             'likes_count', 'is_liked', 'is_bookmarked',
             'reposts_count', 'is_reposted',
-            'created_date', 'updated_date'
+            'created_date', 'updated_date',
         ]
         read_only_fields = ['id', 'author', 'created_date', 'updated_date']
 
+    @extend_schema_field(OpenApiTypes.INT)
     def get_likes_count(self, obj):
         if hasattr(obj, 'likes_count'):
             return obj.likes_count
         return obj.likes.count()
 
+    @extend_schema_field(OpenApiTypes.BOOL)
     def get_is_liked(self, obj):
         if hasattr(obj, 'is_liked'):
             return obj.is_liked
@@ -55,6 +59,7 @@ class PostSerializer(serializers.ModelSerializer):
             return False
         return obj.likes.filter(user=request.user).exists()
 
+    @extend_schema_field(OpenApiTypes.BOOL)
     def get_is_bookmarked(self, obj):
         if hasattr(obj, 'is_bookmarked'):
             return obj.is_bookmarked
@@ -63,11 +68,13 @@ class PostSerializer(serializers.ModelSerializer):
             return False
         return obj.bookmarks.filter(user=request.user).exists()
 
+    @extend_schema_field(OpenApiTypes.INT)
     def get_reposts_count(self, obj):
         if hasattr(obj, 'reposts_count'):
             return obj.reposts_count
         return obj.reposts.count()
 
+    @extend_schema_field(OpenApiTypes.BOOL)
     def get_is_reposted(self, obj):
         if hasattr(obj, 'is_reposted'):
             return obj.is_reposted
@@ -79,5 +86,6 @@ class PostSerializer(serializers.ModelSerializer):
             original_post=obj
         ).exists()
 
+    @extend_schema_field({'type': 'array', 'items': {'type': 'string'}})
     def get_hashtags(self, obj):
         return [tag.name for tag in obj.hashtags.all()]

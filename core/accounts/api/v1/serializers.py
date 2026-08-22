@@ -1,23 +1,20 @@
 from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from drf_spectacular.utils import extend_schema_field
+from drf_spectacular.types import OpenApiTypes
 from accounts.models import User, Profile, Follow
 
 
 class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, validators=[validate_password])
+
     class Meta:
         model = User
         fields = ['email', 'password']
-        # The password field is write-only so it's never included
-        # in serialized output when retrieving user data.
         extra_kwargs = {'password': {'write_only': True}}
-        
+
     def create(self, validated_data):
-        """
-        Override create to ensure the password is hashed via set_password,
-        instead of being saved as plain text.
-        """
         user = User(email=validated_data['email'])
         user.set_password(validated_data['password'])
         user.save()
@@ -25,9 +22,6 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class UserUpdateSerializer(serializers.ModelSerializer):
-    """
-    Serializer for updating the authenticated user's email and/or password.
-    """
     password = serializers.CharField(
         write_only=True, required=False, validators=[validate_password]
     )
@@ -60,25 +54,31 @@ class PublicProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Profile
-        fields = ['username', 'image', 'bio', 'birth_date',
-                  'is_following', 'followers_count', 'following_count']
+        fields = [
+            'username', 'image', 'bio', 'birth_date',
+            'is_following', 'followers_count', 'following_count',
+        ]
 
+    @extend_schema_field(OpenApiTypes.BOOL)
     def get_is_following(self, obj):
         request = self.context.get('request')
         if not request or not request.user.is_authenticated:
             return False
-        return Follow.objects.filter(follower=request.user, following=obj.user).exists()
+        return Follow.objects.filter(
+            follower=request.user, following=obj.user
+        ).exists()
 
+    @extend_schema_field(OpenApiTypes.INT)
     def get_followers_count(self, obj):
         return obj.user.followers.count()
 
+    @extend_schema_field(OpenApiTypes.INT)
     def get_following_count(self, obj):
         return obj.user.following.count()
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
-        # login and getting tokens
         data = super().validate(attrs)
         user = self.user
         profile = getattr(user, 'profile', None)

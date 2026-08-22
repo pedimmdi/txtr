@@ -45,6 +45,7 @@ class ConversationListView(APIView):
         summary='List my conversations',
         description='Returns all conversations the authenticated user participates in.',
         responses={200: ConversationSerializer(many=True)},
+        operation_id='dm_conversations_list',
     )
     def get(self, request):
         conversations = Conversation.objects.filter(
@@ -99,6 +100,7 @@ class ConversationDetailView(APIView):
             'Marks incoming messages as read.'
         ),
         responses={200: MessageSerializer(many=True)},
+        operation_id='dm_conversation_messages',
     )
     def get(self, request, username):
         conversation, other_user, error = self.get_or_create_conversation(

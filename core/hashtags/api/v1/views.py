@@ -7,6 +7,7 @@ from hashtags.models import Hashtag
 from hashtags.api.v1.serializers import HashtagSerializer
 from posts.api.v1.views import get_annotated_posts
 from posts.api.v1.serializers import PostSerializer
+from posts.models import Post
 from core.pagination import StandardResultsSetPagination
 
 
@@ -49,5 +50,7 @@ class HashtagPostsView(generics.ListAPIView):
     ordering_fields = ['created_date', 'likes_count']
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Post.objects.none()
         hashtag = get_object_or_404(Hashtag, name=self.kwargs['name'].lower())
         return get_annotated_posts(self.request.user).filter(hashtags=hashtag)

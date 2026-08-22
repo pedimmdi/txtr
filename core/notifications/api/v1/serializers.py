@@ -1,4 +1,6 @@
 from rest_framework import serializers
+from drf_spectacular.utils import extend_schema_field
+from drf_spectacular.types import OpenApiTypes
 from notifications.models import Notification
 
 
@@ -19,9 +21,10 @@ class NotificationSerializer(serializers.ModelSerializer):
             'id', 'sender_username', 'sender_image',
             'notification_type', 'message',
             'post', 'comment',
-            'is_read', 'created_at'
+            'is_read', 'created_at',
         ]
 
+    @extend_schema_field(OpenApiTypes.STR)
     def get_message(self, obj):
         username = obj.sender.profile.username
         messages = {

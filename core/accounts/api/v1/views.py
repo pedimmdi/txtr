@@ -15,6 +15,7 @@ from .serializers import (
 )
 from core.throttles import AuthRateThrottle, FollowRateThrottle
 from core.pagination import StandardResultsSetPagination
+from core.serializers import ToggleStateSerializer
 
 
 class UserRegisterView(APIView):
@@ -181,6 +182,7 @@ class FollowToggleView(APIView):
     """
     throttle_classes = [FollowRateThrottle]
     permission_classes = [IsAuthenticated]
+    serializer_class = ToggleStateSerializer
 
     @extend_schema(
         tags=['Social'],
@@ -234,6 +236,8 @@ class FollowersListView(generics.ListAPIView):
     pagination_class = StandardResultsSetPagination
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Profile.objects.none()
         profile = get_object_or_404(Profile, username=self.kwargs['username'])
         follower_ids = profile.user.followers.values_list('follower_id', flat=True)
         return Profile.objects.filter(user_id__in=follower_ids)
@@ -258,6 +262,8 @@ class FollowingListView(generics.ListAPIView):
     pagination_class = StandardResultsSetPagination
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Profile.objects.none()
         profile = get_object_or_404(Profile, username=self.kwargs['username'])
         following_ids = profile.user.following.values_list('following_id', flat=True)
         return Profile.objects.filter(user_id__in=following_ids)
