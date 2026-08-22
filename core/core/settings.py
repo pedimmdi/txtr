@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',
     'django_filters',
+    'drf_spectacular',
     # Local apps
     'accounts',
     'posts',
@@ -159,6 +160,7 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
     ),
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'DEFAULT_FILTER_BACKENDS': [
         'django_filters.rest_framework.DjangoFilterBackend',
         'rest_framework.filters.SearchFilter',
@@ -233,3 +235,37 @@ else:
             'BACKEND': 'channels.layers.InMemoryChannelLayer',
         }
     }
+
+# ---------------------------------------------------------------------------
+# OpenAPI / Swagger (drf-spectacular)
+# ---------------------------------------------------------------------------
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Txtr API',
+    'DESCRIPTION': (
+        'Txtr is a minimalist text-only social network. '
+        'This API provides endpoints for authentication, posts, comments, '
+        'follows, likes, bookmarks, hashtags, notifications and direct messages. '
+        'Realtime features (DM delivery and notification badges) are handled via WebSockets.'
+    ),
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'COMPONENT_SPLIT_REQUEST': True,
+    'SCHEMA_PATH_PREFIX': r'/api/v1/',
+    'SWAGGER_UI_SETTINGS': {
+        'deepLinking': True,
+        'persistAuthorization': True,
+        'displayOperationId': False,
+        'filter': True,
+    },
+    # JWT Bearer token support in Swagger UI
+    'SECURITY': [{'BearerAuth': []}],
+    'APPEND_COMPONENTS': {
+        'securitySchemes': {
+            'BearerAuth': {
+                'type': 'http',
+                'scheme': 'bearer',
+                'bearerFormat': 'JWT',
+            }
+        }
+    },
+}
