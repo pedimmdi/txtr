@@ -240,7 +240,7 @@ class FollowersListView(generics.ListAPIView):
             return Profile.objects.none()
         profile = get_object_or_404(Profile, username=self.kwargs['username'])
         follower_ids = profile.user.followers.values_list('follower_id', flat=True)
-        return Profile.objects.filter(user_id__in=follower_ids)
+        return Profile.objects.filter(user_id__in=follower_ids).order_by('username')
 
     def get_serializer_context(self):
         return {'request': self.request}
@@ -266,7 +266,7 @@ class FollowingListView(generics.ListAPIView):
             return Profile.objects.none()
         profile = get_object_or_404(Profile, username=self.kwargs['username'])
         following_ids = profile.user.following.values_list('following_id', flat=True)
-        return Profile.objects.filter(user_id__in=following_ids)
+        return Profile.objects.filter(user_id__in=following_ids).order_by('username')
 
     def get_serializer_context(self):
         return {'request': self.request}
