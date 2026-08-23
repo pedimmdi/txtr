@@ -3,11 +3,15 @@ source = .
 omit =
     */migrations/*
     */tests/*
+    */test_*.py
     conftest.py
     manage.py
     */venv/*
     */__pycache__/*
+    */apps.py
+    */admin.py
 
 [report]
 show_missing = True
 skip_covered = False
+precision = 1

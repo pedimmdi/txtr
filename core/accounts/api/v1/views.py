@@ -287,7 +287,7 @@ class UserSearchView(generics.ListAPIView):
     search_fields = ['username']
 
     def get_queryset(self):
-        return Profile.objects.select_related('user').all()
+        return Profile.objects.select_related('user').order_by('username')
 
     def get_serializer_context(self):
         return {'request': self.request}

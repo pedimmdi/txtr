@@ -15,7 +15,6 @@ jobs:
         working-directory: core
 
     env:
-      # settings.py reads these via django-environ
       SECRET_KEY: ci-test-secret-key-not-for-production
       DEBUG: "True"
       ALLOWED_HOSTS: localhost,127.0.0.1
@@ -39,12 +38,6 @@ jobs:
 
       - name: Run tests with coverage
         run: pytest
-
-      - name: Upload coverage XML
-        if: always()
-        run: |
-          pytest --cov=. --cov-report=xml --cov-config=.coveragerc -q
-        continue-on-error: true
 
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4
