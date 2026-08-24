@@ -1,0 +1,534 @@
+{
+  "info": {
+    "name": "Txtr API",
+    "description": "Txtr — minimalist text-only social network API (Django REST Framework + JWT).\n\n## How to use\n1. Import this collection and the **Txtr Local** environment.\n2. Start the server (`docker compose up` or `runserver`).\n3. Run **Auth → Register** (or use an existing user).\n4. Run **Auth → Login** — tokens are saved automatically to the environment.\n5. Protected requests send `Authorization: Bearer {{access_token}}`.\n\nOpenAPI docs: `{{base_url}}/api/schema/swagger-ui/`",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/accounts/register/",
+            "description": "Create a new account. Anonymous only."
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const data = pm.response.json();",
+                  "    pm.environment.set('access_token', data.access);",
+                  "    pm.environment.set('refresh_token', data.refresh);",
+                  "    if (data.user && data.user.username) {",
+                  "        pm.environment.set('username', data.user.username);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/accounts/login/",
+            "description": "Obtain JWT access + refresh. Saves tokens to the environment."
+          }
+        },
+        {
+          "name": "Refresh token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const data = pm.response.json();",
+                  "    pm.environment.set('access_token', data.access);",
+                  "    if (data.refresh) {",
+                  "        pm.environment.set('refresh_token', data.refresh);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh\": \"{{refresh_token}}\"\n}"
+            },
+            "url": "{{base_url}}/api/token/refresh/",
+            "description": "Exchange refresh token for a new access token."
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh\": \"{{refresh_token}}\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/accounts/logout/",
+            "description": "Blacklist the refresh token."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Accounts",
+      "item": [
+        {
+          "name": "My profile",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/accounts/profile/",
+            "description": "Get authenticated user profile."
+          }
+        },
+        {
+          "name": "Update my profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bio\": \"Hello from Postman\",\n  \"username\": \"{{username}}\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/accounts/profile/",
+            "description": "Partial update of profile fields."
+          }
+        },
+        {
+          "name": "Public profile",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/accounts/users/{{other_username}}/",
+            "description": "Public profile by username."
+          }
+        },
+        {
+          "name": "Search users",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/accounts/users/?search={{username}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "accounts", "users", ""],
+              "query": [
+                { "key": "search", "value": "{{username}}" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Social",
+      "item": [
+        {
+          "name": "Follow / Unfollow",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/accounts/users/{{other_username}}/follow/",
+            "description": "Toggle follow state for a user."
+          }
+        },
+        {
+          "name": "Followers list",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/accounts/users/{{username}}/followers/"
+          }
+        },
+        {
+          "name": "Following list",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/accounts/users/{{username}}/following/"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Posts",
+      "item": [
+        {
+          "name": "List posts",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/posts/?page=1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "posts", ""],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "search", "value": "", "disabled": true },
+                { "key": "ordering", "value": "-created_date", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create post",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const data = pm.response.json();",
+                  "    pm.environment.set('post_id', data.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Hello from Postman #txtr\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/posts/",
+            "description": "Create a post. Saves post_id to environment."
+          }
+        },
+        {
+          "name": "Post detail",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/posts/{{post_id}}/"
+          }
+        },
+        {
+          "name": "Update post",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Updated from Postman\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/posts/{{post_id}}/"
+          }
+        },
+        {
+          "name": "Delete post",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/api/v1/posts/{{post_id}}/"
+          }
+        },
+        {
+          "name": "Home feed",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/posts/feed/"
+          }
+        },
+        {
+          "name": "User posts",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/posts/users/{{username}}/"
+          }
+        },
+        {
+          "name": "Like toggle",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/posts/{{post_id}}/like/"
+          }
+        },
+        {
+          "name": "Bookmark toggle",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/posts/{{post_id}}/bookmark/"
+          }
+        },
+        {
+          "name": "Bookmark list",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/posts/bookmarks/"
+          }
+        },
+        {
+          "name": "Repost toggle",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/posts/{{post_id}}/repost/"
+          }
+        },
+        {
+          "name": "Quote repost",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"My take on this post\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/posts/{{post_id}}/quote/"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Comments",
+      "item": [
+        {
+          "name": "List comments",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/posts/{{post_id}}/comments/"
+          }
+        },
+        {
+          "name": "Create comment",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    pm.environment.set('comment_id', pm.response.json().id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Nice post!\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/posts/{{post_id}}/comments/"
+          }
+        },
+        {
+          "name": "Comment detail",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/posts/{{post_id}}/comments/{{comment_id}}/"
+          }
+        },
+        {
+          "name": "Reply to comment",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"A reply\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/posts/{{post_id}}/comments/{{comment_id}}/replies/"
+          }
+        },
+        {
+          "name": "Comment like toggle",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/posts/{{post_id}}/comments/{{comment_id}}/like/"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Hashtags",
+      "item": [
+        {
+          "name": "List hashtags",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/hashtags/"
+          }
+        },
+        {
+          "name": "Hashtag posts",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/hashtags/{{hashtag}}/posts/"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "item": [
+        {
+          "name": "List notifications",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/notifications/"
+          }
+        },
+        {
+          "name": "Unread count",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/notifications/unread-count/"
+          }
+        },
+        {
+          "name": "Mark one read",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/notifications/{{notification_id}}/read/"
+          }
+        },
+        {
+          "name": "Mark all read",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/notifications/read-all/"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Direct Messages",
+      "item": [
+        {
+          "name": "List conversations",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/dm/"
+          }
+        },
+        {
+          "name": "Get / send messages",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/dm/{{other_username}}/"
+          }
+        },
+        {
+          "name": "Send message",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Hey from Postman\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/dm/{{other_username}}/"
+          }
+        },
+        {
+          "name": "Forward post in DM",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"forwarded_post\": {{post_id}}\n}"
+            },
+            "url": "{{base_url}}/api/v1/dm/{{other_username}}/"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Docs",
+      "item": [
+        {
+          "name": "OpenAPI schema",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": "{{base_url}}/api/schema/"
+          }
+        },
+        {
+          "name": "Swagger UI",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{base_url}}/api/schema/swagger-ui/"
+          }
+        }
+      ]
+    }
+  ]
+}
